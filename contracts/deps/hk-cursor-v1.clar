@@ -46,6 +46,12 @@
         next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u8) }
     }))
 
+(define-read-only (read-buff-20 (cursor { bytes: (buff 4096), pos: uint }))
+    (ok { 
+        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) u20)) (err u1)) u20) (err u1)), 
+        next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u20) }
+    }))
+
 (define-read-only (read-buff-32 (cursor { bytes: (buff 4096), pos: uint }))
     (ok { 
         value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) u32)) (err u1)) u32) (err u1)), 

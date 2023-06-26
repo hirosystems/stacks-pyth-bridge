@@ -11,86 +11,205 @@
 
 ;;;; Constants
 
-;; Initial set of guardians, used for initializing the contract
-(define-constant GENESIS_GUARDIANS (list 
-  0x02aee4b340973ab59eb244059031c85d1ecfbd58e2ab9922c6f8864a6d1a1ae3be 
-  0x026a5f670606f793696111c4591dd0f12748344c784a1870c111935707a0b07452 
-  0x02c0eb187e0d33072dd2979acefa10ca7c7fe3a5664d3b22b87447d1e9c400bb73 
-  0x026664ae7a8a17d2a043777bd2db84436a0e6b17207f10ff8a647b66378063482c 
-  0x02e8f4586c53cf0332f44a1dbbfa058561ae92daf755ed15e997ea15deb5f7afab 
-  0x02bdcdcdac8f91c94f976ab020c72b0bf2042014a64da97f78478dbd6871189d66 
-  0x025b0582caa9e5d3452aa62010aa44a052e2a111d81dfdf96d976f3daed924f480 
-  0x0356bebfb91d9781594e42b28c8cf678582c07d72e6603c2c7fd9825d0f4a10715 
-  0x0235e3f690e6c8938f43f24c52bfb46a6bd362e9e1ecfb8d3e8b95448680bd949c 
-  0x03cf39f23b041ad6d314970124ebb841fbd2309d40e036d5234d0dc4ada3c846c0 
-  0x02439123068274c1962a80e5688dd5d751c8170cb0e326edc5734032fd0b81b0ea 
-  0x02f2ab45f5ca96118c9d12a2afabdaeea876706779412e1dec40585b42ac9dbd79 
-  0x02f8f59376ab1c99446d158f7c8a909292119cc12859e2e865c02547f37b8d14d3
-))
 ;; Generic error
 (define-constant ERR_PANIC (err u0))
 ;; VAA version not supported
-(define-constant ERR_PARSING_VAA_VERSION (err u1001))
+(define-constant ERR_VAA_PARSING_VERSION (err u1001))
 ;; Unable to extract the guardian set-id from the VAA
-(define-constant ERR_PARSING_VAA_GUARDIAN_SET (err u1002))
+(define-constant ERR_VAA_PARSING_GUARDIAN_SET (err u1002))
 ;; Unable to extract the number of signatures from the VAA
-(define-constant ERR_PARSING_VAA_SIGNATURES_LEN (err u1003))
+(define-constant ERR_VAA_PARSING_SIGNATURES_LEN (err u1003))
 ;; Unable to extract the signatures from the VAA
-(define-constant ERR_PARSING_VAA_SIGNATURES (err u1004))
+(define-constant ERR_VAA_PARSING_SIGNATURES (err u1004))
 ;; Unable to extract the timestamp from the VAA
-(define-constant ERR_PARSING_VAA_TIMESTAMP (err u1005))
+(define-constant ERR_VAA_PARSING_TIMESTAMP (err u1005))
 ;; Unable to extract the nonce from the VAA
-(define-constant ERR_PARSING_VAA_NONCE (err u1006))
+(define-constant ERR_VAA_PARSING_NONCE (err u1006))
 ;; Unable to extract the emitter chain from the VAA
-(define-constant ERR_PARSING_VAA_EMITTER_CHAIN (err u1007))
+(define-constant ERR_VAA_PARSING_EMITTER_CHAIN (err u1007))
 ;; Unable to extract the emitter address from the VAA
-(define-constant ERR_PARSING_VAA_EMITTER_ADDRESS (err u1008))
+(define-constant ERR_VAA_PARSING_EMITTER_ADDRESS (err u1008))
 ;; Unable to extract the sequence from the VAA
-(define-constant ERR_PARSING_VAA_SEQUENCE (err u1009))
+(define-constant ERR_VAA_PARSING_SEQUENCE (err u1009))
 ;; Unable to extract the consistency level from the VAA
-(define-constant ERR_PARSING_VAA_CONSISTENCY_LEVEL (err u1010))
+(define-constant ERR_VAA_PARSING_CONSISTENCY_LEVEL (err u1010))
 ;; Unable to extract the payload from the VAA
-(define-constant ERR_PARSING_VAA_PAYLOAD (err u1011))
+(define-constant ERR_VAA_PARSING_PAYLOAD (err u1011))
 ;; Unable to extract the hash the payload from the VAA
-(define-constant ERR_HASHING_VAA_BODY (err u1012))
+(define-constant ERR_VAA_HASHING_BODY (err u1012))
 ;; Number of valid signatures insufficient (min: 13/19)
-(define-constant ERR_THRESHOLD_SIGNATURE (err u1013))
+(define-constant ERR_VAA_CHECKS_THRESHOLD_SIGNATURE (err u1013))
 ;; Multiple signatures were issued by the same guardian
-(define-constant ERR_REDUNDANT_SIGNATURE (err u1014))
+(define-constant ERR_VAA_CHECKS_REDUNDANT_SIGNATURE (err u1014))
 ;; Guardian set specified is expired
-(define-constant ERR_GUARDIAN_SET_EXPIRED (err u1015))
+(define-constant ERR_VAA_CHECKS_GUARDIAN_SET_EXPIRED (err u1030))
 ;; Guardian signature not comprised in guardian set specified
-(define-constant ERR_GUARDIAN_SET_CONSISTENCY (err u1016))
+(define-constant ERR_VAA_CHECKS_GUARDIAN_SET_CONSISTENCY (err u1031))
+;; Guardian Set Update initiated by an unauthorized module
+(define-constant ERR_GSU_PARSING_MODULE (err u1032))
+;; Guardian Set Update initiated from an unauthorized module
+(define-constant ERR_GSU_PARSING_ACTION (err u1033))
+;; Guardian Set Update initiated from an unauthorized module
+(define-constant ERR_GSU_PARSING_CHAIN (err u1034))
+;; Guardian Set Update new index invalid
+(define-constant ERR_GSU_PARSING_INDEX (err u1035))
+;; Guardian Set Update length is invalid
+(define-constant ERR_GSU_PARSING_GUARDIAN_LEN (err u1036))
+;; Guardian Set Update guardians payload is malformatted
+(define-constant ERR_GSU_PARSING_GUARDIANS_BYTES (err u1037))
+;; Guardian Set Update uncompressed public keys invalid
+(define-constant ERR_GSU_UNCOMPRESSED_PUBLIC_KEYS (err u1038))
 
 ;;;; Data vars
 
-(define-data-var current-guardian-set-id uint u0)
+;; Guardian Set Update uncompressed public keys invalid
+(define-data-var guardian-set-initialized bool false)
+;; Keep track of the active guardian set-id
+(define-data-var active-guardian-set uint u0)
 
 ;;;; Data maps
 
-;; Mapping guardian id [0, 19) -> { public-key, set-id }
-(define-map active-guardians uint { public-key: (buff 66), set-id: uint })
-;; Mapping guardian set id -> { expiration-time } + other future properties
-(define-map guardian-set uint { expiration-time: uint })
-
-;;;; Constructors
-(begin
-  (fold add-guardian-to-guardian-set GENESIS_GUARDIANS { id: u0, set-id: u0 }))
+;; Mapping tracking guardians set:
+;; key: set-id
+;; map: public key (compressed + uncompressed)
+(define-map guardian-sets uint (list 19 { compressed-public-key: (buff 33), uncompressed-public-key: (buff 64) }))
 
 ;;;; Public functions
 
 ;; @desc Update the active set of guardians 
+;; @param guardian-set-vaa: VAA embedding the Guardian Set Update informations
+;; @param uncompressed-public-keys: uncompressed public keys, used for recomputing
+;; the addresses embedded in the VAA. `secp256k1-verify` returns a compressed 
+;; public key, and uncompressing the key in clarity would be inefficient and expansive. 
+(define-public (update-guardians-set (guardian-set-vaa (buff 2048)) (uncompressed-public-keys (list 19 (buff 64))))
+    (let ((vaa (if (var-get guardian-set-initialized)
+            (try! (parse-and-verify-vaa guardian-set-vaa))
+            (try! (parse-vaa guardian-set-vaa))))
+          (cursor-guardians-data (try! (parse-and-verify-guardians-set (get payload vaa))))
+          (set-id (get new-index (get value cursor-guardians-data)))
+          (eth-addresses (get guardians-eth-addresses (get value cursor-guardians-data)))
+          (acc (unwrap-panic (as-max-len? (list { 
+            compressed-public-key: (unwrap-panic (as-max-len? 0x u33)), 
+            uncompressed-public-key: (unwrap-panic (as-max-len? 0x u64))
+          }) u20)))
+          (consolidated-public-keys (fold 
+            check-and-consolidate-public-keys 
+            uncompressed-public-keys 
+            { success: true, cursor: u0, eth-addresses: eth-addresses, result: acc }))
+          )
+        ;; Ensure that we have enough uncompressed-public-keys were provided
+        (asserts! (is-eq (len uncompressed-public-keys) (len eth-addresses)) 
+          ERR_GSU_UNCOMPRESSED_PUBLIC_KEYS)
+        ;; Check guardians uncompressed-public-keys
+        (asserts! (get success consolidated-public-keys)
+          ERR_GSU_UNCOMPRESSED_PUBLIC_KEYS)
+
+        (map-set guardian-sets set-id 
+          (unwrap-panic (as-max-len? 
+            (unwrap-panic (slice? (get result consolidated-public-keys) u1 (len (get result consolidated-public-keys)))) 
+            u19)))
+        (var-set active-guardian-set set-id)
+        (var-set guardian-set-initialized true)
+        (ok {
+          vaa: vaa,
+          consolidated-public-keys: consolidated-public-keys,
+        })))
+
+(define-public (get-active-guardian-set) 
+  (ok (retrieve-active-guardian-set)))
+
+(define-private (retrieve-active-guardian-set)
+  (let ((set-id (var-get active-guardian-set))
+        (guardians (unwrap-panic (map-get? guardian-sets set-id))))
+      {
+        set-id: set-id,
+        guardians: guardians
+      }))
+
+(define-private (parse-and-verify-guardians-set (bytes (buff 2048)))
+        (let 
+            ((cursor-module (unwrap! (contract-call? .hk-cursor-v1 read-buff-32 { bytes: bytes, pos: u0 }) 
+                ERR_GSU_PARSING_MODULE))
+             ;; Todo: check 00000000000000000000000000000000000000000000000000000000436f7265
+            (cursor-action (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-module)) 
+                ERR_GSU_PARSING_ACTION))
+            ;; Todo: check u2
+            (cursor-chain (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-action)) 
+                ERR_GSU_PARSING_CHAIN))
+            ;; Todo: check u0
+            (cursor-new-index (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-chain)) 
+                ERR_GSU_PARSING_INDEX))
+            ;; Todo: check minor version
+            (cursor-guardians-count (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-new-index)) 
+                ERR_GSU_PARSING_GUARDIAN_LEN))
+            ;;
+            (guardians-bytes (unwrap! (slice? bytes (get pos (get next cursor-guardians-count)) (+ (get pos (get next cursor-guardians-count)) (* (get value cursor-guardians-count) u20)))
+                ERR_GSU_PARSING_GUARDIANS_BYTES))
+            (guardians-cues (get result (fold is-guardian-cue guardians-bytes { cursor: u0, result: (unwrap-panic (as-max-len? (list u0) u19)) })))
+            (eth-addresses-init (unwrap-panic (as-max-len? (list (unwrap-panic (as-max-len? 0x u20))) u19)))
+            (eth-addresses (get result (fold parse-guardian guardians-cues { bytes: guardians-bytes, result: eth-addresses-init }))))
+            (ok {
+                value: {
+                    guardians-eth-addresses: (unwrap-panic (as-max-len? (unwrap-panic (slice? eth-addresses u1 (+ u1 (get value cursor-guardians-count)))) u19)),
+                    module: (get value cursor-module),
+                    action: (get value cursor-action),
+                    chain: (get value cursor-chain),
+                    new-index: (get value cursor-new-index)
+                },
+                next: { 
+                    bytes: bytes, 
+                    pos: (+ (get pos (get next cursor-guardians-count)) 
+                            (* (get value cursor-guardians-count) u20)) 
+                }
+            })))
+
+(define-private (is-guardian-cue (byte (buff 1)) (acc { cursor: uint, result: (list 19 uint) }))
+    (if (and (is-eq u0 (mod (get cursor acc) u20)) (> (get cursor acc) u0) )
+        { 
+            cursor: (+ u1 (get cursor acc)), 
+            result: (unwrap-panic (as-max-len? (append (get result acc) (get cursor acc)) u19)),
+        }
+        {
+            cursor: (+ u1 (get cursor acc)), 
+            result: (get result acc),
+        }))
+
+(define-private (check-and-consolidate-public-keys (uncompressed-public-key (buff 64)) (acc { success: bool, cursor: uint, eth-addresses: (list 19 (buff 20)), result: (list 20 { compressed-public-key: (buff 33), uncompressed-public-key: (buff 64)})}))
+    (let ((eth-address (unwrap-panic (element-at? (get eth-addresses acc) (get cursor acc))))
+          (compressed-public-key (compress-public-key uncompressed-public-key))
+          (entry (if (is-eth-address-matching-public-key uncompressed-public-key eth-address)
+              { compressed-public-key: compressed-public-key, uncompressed-public-key: uncompressed-public-key }
+              { compressed-public-key: 0x, uncompressed-public-key: 0x })))
+      {
+        cursor: (+ u1 (get cursor acc)),
+        eth-addresses: (get eth-addresses acc),
+        success: true,
+        result: (unwrap-panic (as-max-len? (append (get result acc) entry) u20)),
+      }))
+
+(define-private (is-eth-address-matching-public-key (uncompressed-public-key (buff 64)) (eth-address (buff 20)))
+  (is-eq (unwrap-panic (slice? (keccak256 uncompressed-public-key) u12 u32)) eth-address))
+
+(define-private (parse-guardian (cue-position uint) (acc { bytes: (buff 2048), result: (list 20 (buff 20))}))
+    (let (
+        (cursor-address-bytes (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-20 { bytes: (get bytes acc), pos: cue-position })))
+    )
+    {
+        bytes: (get bytes acc),
+        result: (unwrap-panic (as-max-len? (append (get result acc) (get value cursor-address-bytes)) u20))
+    }))
+
+;; @desc Update the active set of guardians 
 ;; @param expiration-time:
 ;; @param guardians:
-(define-public (update-guardian-set (expiration-time uint) (guardians (list 19 { id: uint, public-key: (buff 66) })))
-  (let ((set-id (var-get current-guardian-set-id))
-        (new-set-id (+ set-id u1))) 
+(define-private (insert-entry-in-guardians (expiration-time uint) (new-set-id uint) (new-guardians (list 19 { uncompressed-public-key: (buff 64), compressed-public-key: (buff 33) })))
+  (let ((set-id (var-get active-guardian-set)))
       ;; TODO: check authorization
       ;; Update set
-      (fold add-guardian-to-guardian-set GENESIS_GUARDIANS { id: u0, set-id: new-set-id })
+      ;; (fold add-guardian-to-guardian-set guardians { id: u0, set-id: new-set-id })
       ;; Update set-id
-      (var-set current-guardian-set-id new-set-id)
-      (ok { set-id: new-set-id, guardians: guardians })))
+      ;; (var-set current-guardian-set-id new-set-id)
+      { set-id: new-set-id, guardians: new-guardians }))
 
 ;; @desc Parse a Verified Action Approval (VAA)
 ;; 
@@ -112,11 +231,11 @@
 ;; @param vaa-bytes: 
 (define-read-only (parse-vaa (vaa-bytes (buff 2048)))
     (let ((cursor-version (unwrap! (contract-call? .hk-cursor-v1 read-u8 { bytes: vaa-bytes, pos: u0 }) 
-            ERR_PARSING_VAA_VERSION))
+            ERR_VAA_PARSING_VERSION))
           (cursor-guardian-set (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-version)) 
-            ERR_PARSING_VAA_GUARDIAN_SET))
+            ERR_VAA_PARSING_GUARDIAN_SET))
           (cursor-signatures-len (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-guardian-set)) 
-            ERR_PARSING_VAA_SIGNATURES_LEN))
+            ERR_VAA_PARSING_SIGNATURES_LEN))
           (cursor-signatures (fold 
             batch-read-signatures
             (list u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0)
@@ -125,33 +244,27 @@
                 value: (list),
                 iter: (get value cursor-signatures-len)
             }))
-          (vaa-body-hash (keccak256 (get value (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-2048 (get next cursor-signatures))
-            ERR_HASHING_VAA_BODY))))
+          (vaa-body-hash (keccak256 (keccak256 (get value (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-2048 (get next cursor-signatures))
+            ERR_VAA_HASHING_BODY)))))
           (cursor-timestamp (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-signatures)) 
-            ERR_PARSING_VAA_TIMESTAMP))
+            ERR_VAA_PARSING_TIMESTAMP))
           (cursor-nonce (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-timestamp)) 
-            ERR_PARSING_VAA_NONCE))
+            ERR_VAA_PARSING_NONCE))
           (cursor-emitter-chain (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-nonce)) 
-            ERR_PARSING_VAA_EMITTER_CHAIN))
+            ERR_VAA_PARSING_EMITTER_CHAIN))
           (cursor-emitter-address (unwrap! (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-emitter-chain)) 
-            ERR_PARSING_VAA_EMITTER_ADDRESS))
+            ERR_VAA_PARSING_EMITTER_ADDRESS))
           (cursor-sequence (unwrap! (contract-call? .hk-cursor-v1 read-u64 (get next cursor-emitter-address)) 
-            ERR_PARSING_VAA_SEQUENCE))
+            ERR_VAA_PARSING_SEQUENCE))
           (cursor-consistency-level (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-sequence)) 
-            ERR_PARSING_VAA_CONSISTENCY_LEVEL))
+            ERR_VAA_PARSING_CONSISTENCY_LEVEL))
           (cursor-payload (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-2048 (get next cursor-consistency-level))
-            ERR_PARSING_VAA_PAYLOAD))
+            ERR_VAA_PARSING_PAYLOAD))
           (public-keys-results (fold
             batch-recover-public-keys
             (get value cursor-signatures)
             {
                 message-hash: vaa-body-hash,
-                value: (list)
-            }))
-          (signatures-from-active-guardians (fold
-            batch-check-active-public-keys
-            (get value public-keys-results)
-            {
                 value: (list)
             }))
         )
@@ -167,26 +280,34 @@
             consistency-level: (get value cursor-consistency-level),
             payload: (get value cursor-payload),
             guardians-public-keys: (get value public-keys-results),
-            signatures-from-active-guardians: (get value signatures-from-active-guardians),
             vaa-body-hash: vaa-body-hash
         })))
 
 ;; @desc Parse and check the validity of a Verified Action Approval (VAA)
 ;; @param vaa-bytes: 
 (define-read-only (parse-and-verify-vaa (vaa-bytes (buff 2048)))
-    (let ((vaa (try! (parse-vaa vaa-bytes)))) 
+    (let ((vaa (try! (parse-vaa vaa-bytes)))
+          (active-guardians (unwrap! (map-get? guardian-sets (var-get active-guardian-set)) ERR_VAA_CHECKS_GUARDIAN_SET_CONSISTENCY))
+          (signatures-from-active-guardians (fold batch-check-active-public-keys (get guardians-public-keys vaa)
+            {
+                active-guardians: active-guardians,
+                value: (unwrap-panic (as-max-len? (list (unwrap-panic (as-max-len? 0x u33))) u20))
+            }))
+    )
         ;; Ensure that version is supported (v1)
         (asserts! (is-eq (get version vaa) u1) (err u99))
+        ;; (asserts! (is-eq (len active-guardians) u19) (err  (len active-guardians)))
         ;; TODO: Ensure that the count of valid signatures is >= 13
         ;; (asserts! (> (len (get value signatures-from-active-guardians)) u13) ERR_SIGNATURE_THRESHOLD)
         ;; TODO: Ensure that each guardian in signatures-from-active-guardians is unique
-        ;; ERR_REDUNDANT_SIGNATURE
+        ;; ERR_VAA_CHECKS_REDUNDANT_SIGNATURE
         ;; TODO: Ensure that the guardian set is not expired
-        ;; ERR_GUARDIAN_SET_EXPIRED
+        ;; ERR_VAA_CHECKS_GUARDIAN_SET_EXPIRED
         ;; TODO: Ensure that the number of signatures is legit
-        ;; ERR_THRESHOLD_SIGNATURE
+        ;; ERR_VAA_CHECKS_THRESHOLD_SIGNATURE
         ;; Good to go!
         (ok vaa)))
+
 
 ;; @desc Parse and check the validity of a Verified Action Approval (VAA)
 ;; @param nonce: number assigned to each message, providing a mechanism by which to group messages together within a Batch VAA.
@@ -213,24 +334,36 @@
             })))
 
 ;; @desc Foldable function evaluating signatures from a list of { guardian-id: u8, signature: (buff 65) }, returning a list of recovered public-keys
-(define-private (batch-recover-public-keys (entry { guardian-id: uint, signature: (buff 65) }) (acc { message-hash: (buff 32), value: (list 19 { public-key: (response (buff 33) uint), guardian-id: uint }) }))
-    (let ((res-recovery (secp256k1-recover? (get message-hash acc) (get signature entry)))
-          (updated-public-keys (append (get value acc) { public-key: res-recovery, guardian-id: (get guardian-id entry) } )))
+(define-private (batch-recover-public-keys (entry { guardian-id: uint, signature: (buff 65) }) (acc { message-hash: (buff 32), value: (list 19 { recovered-compressed-public-key: (response (buff 33) uint), guardian-id: uint }) }))
+    (let ((recovered-compressed-public-key (secp256k1-recover? (get message-hash acc) (get signature entry)))
+          (updated-public-keys (append (get value acc) { recovered-compressed-public-key: recovered-compressed-public-key, guardian-id: (get guardian-id entry) } )))
           { 
             message-hash: (get message-hash acc), 
             value: (unwrap-panic (as-max-len? updated-public-keys u19)) 
         }))
 
 ;; @desc Foldable function evaluating signatures from a list of { guardian-id: u8, signature: (buff 65) }, returning a list of recovered public-keys
-(define-private (batch-check-active-public-keys (entry { public-key: (response (buff 33) uint), guardian-id: uint }) (acc { value: (list 19 (buff 33)) }))
-    (match (get public-key entry) 
-        public-key (if (is-eq (some public-key) (get public-key (map-get? active-guardians (get guardian-id entry))))
-            { value: (unwrap-panic (as-max-len? (append (get value acc) public-key) u19))  }
+(define-private (batch-check-active-public-keys (entry { recovered-compressed-public-key: (response (buff 33) uint), guardian-id: uint }) (acc { active-guardians: (list 19 { compressed-public-key: (buff 33), uncompressed-public-key: (buff 64) }),  value: (list 20 (buff 33))}))
+   (let ((compressed-public-key (get compressed-public-key (unwrap-panic (element-at? (get active-guardians acc) (get guardian-id entry))))))
+     (match (get recovered-compressed-public-key entry) 
+        recovered-public-key (if (is-eq (print recovered-public-key) (print compressed-public-key))
+            { value: (unwrap-panic (as-max-len? (append (get value acc) recovered-public-key) u20)), active-guardians: (get active-guardians acc) }
             acc)
-        err acc))
+        err acc)))
   
 ;; @desc Foldable function updating a data-map of guardians, given a list of public-keys
-(define-private (add-guardian-to-guardian-set (public-key (buff 66)) (acc { id: uint, set-id: uint }))
-  (begin
-    (map-set active-guardians (get id acc) { public-key: public-key, set-id: (get set-id acc) })
-    { id: (+ (get id acc) u1), set-id: (get set-id acc) }))
+
+(define-private (compress-public-key (uncompressed-public-key (buff 64)))
+    (if (is-eq (len uncompressed-public-key) u64)
+      (let ((x-coordinate (unwrap-panic (slice? uncompressed-public-key u0 u32)))
+            (y-coordinate-parity (buff-to-uint-be (unwrap-panic (element-at? uncompressed-public-key u63)))))
+          (unwrap-panic (as-max-len? (concat (if (is-eq (mod y-coordinate-parity u2) u0) 0x02 0x03) x-coordinate) u33)))
+      (unwrap-panic (as-max-len? 0x u33))))
+
+(define-public (recover-public-keys)
+    (let ((public-key (unwrap-panic (secp256k1-recover? 0x43f3693ccdcb4400e1d1c5c8cec200153bd4b3d167e5b9fe5400508cf8717880 0x38535089d6eec412a00066f84084212316ee3451145a75591dbd4a1c2a2bff442223f81e58821bfa4e8ffb80a881daf7a37500b04dfa5719fff25ed4cec8dda301)))
+          (address (unwrap-panic (as-max-len? (unwrap-panic (slice? (keccak256 public-key) u0 u20)) u20))))
+          (ok { 
+            public-key: public-key, 
+            address: address 
+        })))
