@@ -1,9 +1,3 @@
-// #[macro_use]
-// extern crate rocket;
-
-// #[macro_use]
-// extern crate serde_json;
-
 #[macro_use]
 extern crate hiro_system_kit;
 

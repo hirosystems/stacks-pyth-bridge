@@ -4,7 +4,7 @@ use chainhook_sdk::utils::Context;
 
 use crate::{
     config::{generator::generate_config, Config},
-    service::{ping_bridge_service, start_bridge_service},
+    service::{ping_bridge_service, start_bridge_service, collect_guardians_public_keys},
 };
 
 #[derive(Parser, Debug)]
@@ -66,6 +66,9 @@ enum ServiceCommand {
     /// Fetch the price feed ids and check the balance of the hot wallet account
     #[clap(name = "ping", bin_name = "ping")]
     Ping(PingCommand),
+    /// Sniff public keys from active guardian set
+    #[clap(name = "sniff", bin_name = "sniff")]
+    CollectVAAs(CollectVAAsCommand),
 }
 
 #[derive(Parser, PartialEq, Clone, Debug)]
@@ -76,6 +79,13 @@ struct StartCommand {
     // /// Start REST API for managing configuration
     // #[clap(long = "start-http-api")]
     // pub start_http_api: bool,
+}
+
+#[derive(Parser, PartialEq, Clone, Debug)]
+struct CollectVAAsCommand {
+    /// Load config file path
+    #[clap(long = "config-path")]
+    pub config_path: String,
 }
 
 #[derive(Parser, PartialEq, Clone, Debug)]
@@ -134,6 +144,11 @@ async fn handle_command(opts: Opts, ctx: Context) -> Result<(), String> {
             // Start service
             let config = Config::from_file_path(&options.config_path)?;
             ping_bridge_service(&config, &ctx).await?;
+        }
+        Command::Service(ServiceCommand::CollectVAAs(options)) => {
+            // Start service
+            let config = Config::from_file_path(&options.config_path)?;
+            collect_guardians_public_keys(&config, &ctx).await;
         }
     }
     Ok(())

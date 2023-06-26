@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 serde = "1"
-serde_json = "1"
 serde_derive = "1"
 hex = "0.4.3"
 rand = "0.8.5"
@@ -15,7 +14,8 @@ toml = { version = "0.5.11", features = ["preserve_order"] }
 ctrlc = { version = "3.2.2", optional = true }
 reqwest = { version = "0.11", features = ["stream", "json"] }
 crossbeam-channel = "0.5.8"
-threadpool = "1.8.1"
 clap = { version = "4.3.2", features = ["derive"] }
 clap_generate = { version = "3.0.3" }
 base64 = "0.21.2"
+sha3 = "0.10.8"
+libsecp256k1 = { version = "0.7.0" }
