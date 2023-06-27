@@ -61,7 +61,7 @@
 
 ;;;; Public functions
 ;;
-(define-public (update-price-feeds (vaas (list 4 (buff 2048))))
+(define-public (update-prices-feeds (vaas (list 4 (buff 2048))))
     (let ((decoded-vaas (map parse-and-verify-vaa vaas))
           (decoded-prices-attestations-batches (map parse-and-verify-price-attestations decoded-vaas))
           (watched-prices-feeds (var-get watched-price-feeds))
@@ -78,8 +78,8 @@
             ERR_P2WH_PARSING_ATTESTATION_COUNT))
         (cursor-attestation-size (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-attestations-count)) 
             ERR_P2WH_PARSING_ATTESTATION_SIZE))
-        (attestations-bytes (print (unwrap! (slice? pf-bytes (get pos (get next cursor-attestation-size)) (+ (get pos (get next cursor-attestation-size)) (* (get value cursor-attestations-count) (get value cursor-attestation-size))))
-            ERR_P2WH_SLICING_ATTESTATION_BYTES)))
+        (attestations-bytes (unwrap! (slice? pf-bytes (get pos (get next cursor-attestation-size)) (+ (get pos (get next cursor-attestation-size)) (* (get value cursor-attestations-count) (get value cursor-attestation-size))))
+            ERR_P2WH_SLICING_ATTESTATION_BYTES))
         (attestations-cues (get result (fold is-price-attestation-cue attestations-bytes { size: (get value cursor-attestation-size), cursor: u0, result: (unwrap-panic (as-max-len? (list u0) u64)) })))
         (encoded-price-attestations (get result (fold parse-price-attestation attestations-cues { attestations-bytes: attestations-bytes, result: (unwrap-panic (as-max-len? (list {
             price-feed-id: (unwrap-panic (as-max-len? 0x u32)),
@@ -316,6 +316,7 @@
         }) (acc { input: (list 2048 (buff 32)), updated-prices-feeds: (list 2048 (buff 32)) }))
     (match (index-of? (get input acc) (get price-feed-id prices-attestation)) 
         index (begin 
+                ;; Update Price Feed
                 (map-set prices 
                     { 
                         price-feed-id: (get price-feed-id prices-attestation), 
@@ -333,6 +334,9 @@
                         prev-price: (get prev-price prices-attestation), 
                         prev-conf: (get prev-conf prices-attestation), 
                     })
+                ;; TODO: check timestamps
+                ;; Emit event
+                (print { type: "price-feed", action: "updated", data: prices-attestation })
                 {
                     input: (get input acc),
                     updated-prices-feeds: (unwrap-panic (as-max-len? (append (get updated-prices-feeds acc) (get price-feed-id prices-attestation)) u2048))

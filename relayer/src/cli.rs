@@ -4,7 +4,7 @@ use chainhook_sdk::utils::Context;
 
 use crate::{
     config::{generator::generate_config, Config},
-    service::{ping_bridge_service, start_bridge_service, collect_guardians_public_keys},
+    service::{collect_guardians_public_keys, ping_bridge_service, start_bridge_service},
 };
 
 #[derive(Parser, Debug)]

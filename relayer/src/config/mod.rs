@@ -2,8 +2,8 @@ pub mod file;
 pub mod generator;
 
 use chainhook_sdk::chainhook_types::StacksNetwork;
-use chainhook_sdk::stacks_rpc_client::clarity::vm::types::QualifiedContractIdentifier;
 use chainhook_sdk::observer::EventObserverConfig;
+use chainhook_sdk::stacks_rpc_client::clarity::vm::types::QualifiedContractIdentifier;
 use chainhook_sdk::stacks_rpc_client::crypto::Wallet;
 
 use file::ConfigFile;
@@ -81,7 +81,7 @@ impl Config {
         let wallet = Wallet {
             mnemonic: config_file.stacks.mnemonic.clone(),
             derivation: config_file.stacks.derivation_path,
-            mainnet: stacks_network.is_mainnet()
+            mainnet: stacks_network.is_mainnet(),
         };
         let pyth_oracle_contract_address =
             QualifiedContractIdentifier::parse(&config_file.stacks.pyth_oracle_contract_address)

@@ -3,5 +3,5 @@
 **/settings/Testnet.toml
 .cache/**
 history.txt
-node/target
+relayer/target
 .DS_Store

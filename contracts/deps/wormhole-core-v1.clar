@@ -346,10 +346,10 @@
 (define-private (batch-check-active-public-keys (entry { recovered-compressed-public-key: (response (buff 33) uint), guardian-id: uint }) (acc { active-guardians: (list 19 { compressed-public-key: (buff 33), uncompressed-public-key: (buff 64) }),  value: (list 20 (buff 33))}))
    (let ((compressed-public-key (get compressed-public-key (unwrap-panic (element-at? (get active-guardians acc) (get guardian-id entry))))))
      (match (get recovered-compressed-public-key entry) 
-        recovered-public-key (if (is-eq (print recovered-public-key) (print compressed-public-key))
+        recovered-public-key (if (is-eq recovered-public-key compressed-public-key)
             { value: (unwrap-panic (as-max-len? (append (get value acc) recovered-public-key) u20)), active-guardians: (get active-guardians acc) }
             acc)
-        err acc)))
+        err (print acc))))
   
 ;; @desc Foldable function updating a data-map of guardians, given a list of public-keys
 

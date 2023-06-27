@@ -2091,7 +2091,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pyth-stacks-bridge"
+name = "pyth-stacks-relayer"
 version = "0.1.0"
 dependencies = [
  "base64 0.21.2",

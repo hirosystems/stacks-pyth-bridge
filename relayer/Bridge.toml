@@ -11,7 +11,7 @@ price_feeds_ids = [
 [stacks]
 network = "devnet"
 stacks_node_rpc_url = "http://localhost:20443"
-pyth_oracle_contract_address = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-price-feed-oracle-v1"
+pyth_oracle_contract_address = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-oracle-v1"
 mnemonic = "prevent gallery kind limb income control noise together echo rival record wedding sense uncover school version force bleak nuclear include danger skirt enact arrow"
 derivation_path = "m/44'/5757'/0'/0/0"
 start_block = 6

@@ -1,5 +1,7 @@
 # Bridging Pyth to the Stacks blockchain
 
+**Status**: *Alpha, do not use in production*
+
 Stacks is a blockchain linked to Bitcoin by its consensus mechanism that spans the two chains, called Proof of Transfer. This enables Stacks to leverage Bitcoin’s security and enables Stacks apps to use Bitcoin’s state.
 Stacks is a Bitcoin layer that enables decentralized apps and smart contracts.
 
@@ -8,12 +10,12 @@ Price feeds are available on multiple blockchains and can also be used in off-ch
 
 ## Setup and Test a Devnet Bridge
 
-The bridge is being operated through an offchain service `stacks-pyth-bridge` and a set of contracts implementing the core functionalities specified by the Wormhole protocol, along with . 
+The bridge is being operated through an offchain service `stacks-pyth-relayer` and a set of contracts implementing the core functionalities specified by the Wormhole protocol, along with . 
 
 The contracts are developped in Clarity and is using Clarinet for its test harnessing.
 This guide is assuming that a recent installation of Clarinet (available on brew and winget) is available locally. 
 
-Git clone and compile **stacks-pyth-bridge**
+Git clone and compile **stacks-pyth-relayer**
 
 ```bash
 $ git clone https://github.com/hirosystems/stacks-pyth-bridge.git
@@ -28,14 +30,14 @@ $ clarinet integrate
 In another console, the service can be compiled and installed using the command:
 
 ```bash
-$ cd stacks-pyth-bridge/node
+$ cd stacks-pyth-bridge/relayer
 $ cargo install --path .
 ```
 
 Once installed, a config can be generated using the command:
 
 ```bash
-$ stacks-pyth-bridge config new
+$ stacks-pyth-relayer config new
 ```
 
 A typical valid config looks like this:
@@ -71,13 +73,13 @@ ingestion_port = 10000
 After reviewing the generated config, the service can be tested using the command:
 
 ```bash
-$ stacks-pyth-bridge service ping --config-path Bridge.toml
+$ stacks-pyth-relayer service ping --config-path Bridge.toml
 ```
 
 After validating that the service is able to connect to the Price API service and the Stacks chain, the service can be ran with the command:
 
 ```bash
-$ stacks-pyth-bridge service start --config-path Bridge.toml
+$ stacks-pyth-relayer service start --config-path Bridge.toml
 ```
 
 The operator will start fetching prices from the Pyth network Price API, and submit these Verified Action Attestation to the Pyth contract. The Pyth contract is submitting these VAAs to the wormhole contract, ensuring that the guardians correctly signed the payloads.
@@ -137,3 +139,13 @@ For every new price recorded and stored on chain, the `pyth-oracle-v1` is emitti
 ```
 
 These events can be observed using [Chainhook](https://github.com/hirosystems/chainhook), using the `print` predicates.
+
+## Todos:
+
+- [] Support for `PNAU` wire format
+- [] Resolve todos, mostly aiming at adding more checks in both wormhole and pyth contracts
+- [] Address insufficient test coverage
+- [] Add a method to update the list of price feeds watched
+- [] Resolve build warnings
+- [] Improve documentation
+- [] Add example
