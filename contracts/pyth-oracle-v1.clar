@@ -1,60 +1,128 @@
+;;;; Title: pyth-oracle
+;; Version: 1
+;; Summary:
+;; Description:
 
-;; title: pyth-oracle-v1
-;; version:
-;; summary:
-;; description:
+;;;; Traits
 
-;; traits
-;;
 
-;; token definitions
-;; 
-
-;; constants
+;;;; Constants
 ;;
 ;; Generic error
 (define-constant ERR_PANIC (err u0))
-;; Unable to <>
-(define-constant ERR_PARSING_PF_MAGIC_BYTES (err u2001))
-;; Unable to <>
-(define-constant ERR_PARSING_PF_VERSION_MAJ (err u2002))
-;; Unable to <>
-(define-constant ERR_PARSING_PF_VERSION_MIN (err u2003))
-;; Unable to <>
-(define-constant ERR_PARSING_PF_TRAILING_HEADER_SIZE (err u2004))
-;; Unable to <>
-(define-constant ERR_PARSING_PF_UPDATE_TYPE (err u2005))
+;; Unable to price feed magic bytes
+(define-constant ERR_PF_PARSING_MAGIC_BYTES (err u2001))
+;; Unable to parse major version
+(define-constant ERR_PF_PARSING_VERSION_MAJ (err u2002))
+;; Unable to parse minor version
+(define-constant ERR_PF_PARSING_VERSION_MIN (err u2003))
+;; Unable to parse trailing header size
+(define-constant ERR_PF_PARSING_TRAILING_HEADER_SIZE (err u2004))
+;; Unable to parse update type
+(define-constant ERR_PF_PARSING_UPDATE_TYPE (err u2005))
+;; Unable to parse payload ID (P2WH, PNAU, ...)
+(define-constant ERR_PF_PARSING_PAYLOAD_ID (err u2006))
+;; Unable to parse price attestation count
+(define-constant ERR_P2WH_PARSING_ATTESTATION_COUNT (err u2007))
+;; Unable to parse price attestation size
+(define-constant ERR_P2WH_PARSING_ATTESTATION_SIZE (err u2008))
+;; Unable to slice price attestation blobs
+(define-constant ERR_P2WH_SLICING_ATTESTATION_BYTES (err u2009))
+;; Unable to retrieve price feed
+(define-constant ERR_PF_NOT_FOUND (err u2010))
 
-(define-constant ERR_PARSING_PF_PAYLOAD_ID (err u2006))
 
-(define-constant ERR_PARSING_PF_ATTESTATION_COUNT (err u2007))
-
-(define-constant ERR_PARSING_PF_ATTESTATION_SIZE (err u2008))
-
-(define-constant ERR_SLICING_PF_ATTESTATION_BYTES (err u2009))
-
-(define-constant ERR_PARSING_PRICE_ATTESTATION (err u2010))
-
-
-;; data vars
+;;;; Data vars
 ;;
-(define-public (update-price-feeds (vaas (list 20 (buff 2048))))
+
+;;;; Data maps
+;;
+(define-map prices
+    {
+        price-feed-id: (buff 32), 
+    } 
+    {
+        price: int,
+        conf: uint,
+        expo: int,
+        attestation-time: uint,
+        ema-price: int,
+        ema-conf: uint,
+        status: uint,
+        publish-time: uint,
+        prev-publish-time: uint,
+        prev-price: int,
+        prev-conf: uint,
+    })
+
+(define-data-var watched-price-feeds 
+    (list 1024 (buff 32)) 
+    (list 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43))
+
+;;;; Public functions
+;;
+(define-public (update-price-feeds (vaas (list 4 (buff 2048))))
     (let ((decoded-vaas (map parse-and-verify-vaa vaas))
-        (price-feeds (map parse-and-verify-price-attestations decoded-vaas))
-        ;; (updated-price-feeds (map update-price-feed price-feeds))
-        )
-        (ok price-feeds)))
+          (decoded-prices-attestations-batches (map parse-and-verify-price-attestations decoded-vaas))
+          (watched-prices-feeds (var-get watched-price-feeds))
+          (updated-prices-feeds (get updated-prices-feeds (fold process-prices-attestations-batch decoded-prices-attestations-batches { input: watched-prices-feeds, updated-prices-feeds: (list) }))))
+        (ok updated-prices-feeds)))
 
-;; data maps
+(define-read-only (read-price-feed (price-feed-id (buff 32)))
+    (let ((price-feed-entry (unwrap! (map-get? prices { price-feed-id: price-feed-id }) ERR_PF_NOT_FOUND)))
+        (ok price-feed-entry)))
+    
+(define-public (parse-and-verify-price-attestations (pf-bytes (buff 2048)))
+    (let ((cursor-price-attestations-header (try! (parse-price-attestations-header pf-bytes)))
+        (cursor-attestations-count (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-price-attestations-header)) 
+            ERR_P2WH_PARSING_ATTESTATION_COUNT))
+        (cursor-attestation-size (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-attestations-count)) 
+            ERR_P2WH_PARSING_ATTESTATION_SIZE))
+        (attestations-bytes (print (unwrap! (slice? pf-bytes (get pos (get next cursor-attestation-size)) (+ (get pos (get next cursor-attestation-size)) (* (get value cursor-attestations-count) (get value cursor-attestation-size))))
+            ERR_P2WH_SLICING_ATTESTATION_BYTES)))
+        (attestations-cues (get result (fold is-price-attestation-cue attestations-bytes { size: (get value cursor-attestation-size), cursor: u0, result: (unwrap-panic (as-max-len? (list u0) u64)) })))
+        (encoded-price-attestations (get result (fold parse-price-attestation attestations-cues { attestations-bytes: attestations-bytes, result: (unwrap-panic (as-max-len? (list {
+            price-feed-id: (unwrap-panic (as-max-len? 0x u32)),
+            price: (unwrap-panic (as-max-len? 0x u8)),
+            conf: (unwrap-panic (as-max-len? 0x u8)),
+            expo: (unwrap-panic (as-max-len? 0x u4)),
+            ema-price: (unwrap-panic (as-max-len? 0x u8)),
+            ema-conf: (unwrap-panic (as-max-len? 0x u8)),
+            status: (unwrap-panic (as-max-len? 0x u1)),
+            attestation-time: (unwrap-panic (as-max-len? 0x u8)),
+            publish-time: (unwrap-panic (as-max-len? 0x u8)),
+            prev-publish-time: (unwrap-panic (as-max-len? 0x u8)),
+            prev-price: (unwrap-panic (as-max-len? 0x u8)),
+            prev-conf: (unwrap-panic (as-max-len? 0x u8)),
+        }) u64)) })))
+        (price-attestations (map decode-price-attestation (unwrap-panic (slice? encoded-price-attestations u1 (+ u1 (get value cursor-attestations-count))))))
+    ;; Todo: check minor version
+    ;;   (cursor-trailing-header-size (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-price-feed-header)) 
+    ;;     ERR_PF_PARSING_TRAILING_HEADER_SIZE))
+    ;;   (cursor-udpate-type (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-trailing-header-size)) 
+    ;;     ERR_PF_PARSING_VERSION_MIN))
+        
+    ;;   (cursor-guardian-set (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-version)) 
+    ;;     ERR_PARSING_VAA_GUARDIAN_SET))
+    ;;   (cursor-signatures (fold 
+    ;;     batch-read-signatures
+    ;;     (list u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0)
+    ;;     { 
+    ;;         next: (get next cursor-signatures-len), 
+    ;;         value: (list),
+    ;;         iter: (get value cursor-signatures-len)
+    ;;     }))
+    )
+        (ok {
+            attestations-count: (get value cursor-attestations-count),
+            attestation-size: (get value cursor-attestation-size),
+            price-attestations: price-attestations
+        })))
+
+;;;; Read only functions
 ;;
 
-;; public functions
-;;
-
-;; read only functions
-;;
-
-;; private functions
+;;;; Private functions
 ;;
 (define-private (parse-and-verify-vaa (vaa-bytes (buff 2048)))
     (let ((vaa (unwrap-panic (contract-call? .wormhole-core-v1 parse-and-verify-vaa vaa-bytes))))
@@ -63,21 +131,21 @@
 (define-private (parse-price-feed-header (pf-bytes (buff 2048)))
         (let 
             ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: pf-bytes, pos: u0 }) 
-                ERR_PARSING_PF_MAGIC_BYTES))
+                ERR_PF_PARSING_MAGIC_BYTES))
              ;; Todo: check magic bytes
             (cursor-version-maj (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-magic)) 
-                ERR_PARSING_PF_VERSION_MAJ))
+                ERR_PF_PARSING_VERSION_MAJ))
             ;; Todo: check major version
             (cursor-version-min (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-version-maj)) 
-                ERR_PARSING_PF_VERSION_MIN))
+                ERR_PF_PARSING_VERSION_MIN))
             ;; Todo: check minor version
             (cursor-trailing-header-size (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-version-min)) 
-                ERR_PARSING_PF_TRAILING_HEADER_SIZE))
+                ERR_PF_PARSING_TRAILING_HEADER_SIZE))
             ;; We use another offset for the trailing header and in the end add the
             ;; offset by trailingHeaderSize to skip the future headers.
             (cursor-udpate-type (unwrap! (contract-call? .hk-cursor-v1 read-u16 { bytes: pf-bytes, pos: (+ (get pos (get next cursor-trailing-header-size)) 
                                                                                                            (get value cursor-trailing-header-size)) })
-                ERR_PARSING_PF_UPDATE_TYPE)))
+                ERR_PF_PARSING_UPDATE_TYPE)))
             (ok {
                 value: {
                     magic: (get value cursor-magic),
@@ -91,19 +159,19 @@
 (define-private (parse-price-attestations-header (pf-bytes (buff 2048)))
         (let 
             ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: pf-bytes, pos: u0 }) 
-                ERR_PARSING_PF_MAGIC_BYTES))
+                ERR_PF_PARSING_MAGIC_BYTES))
              ;; Todo: check magic bytes
             (cursor-version-maj (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-magic)) 
-                ERR_PARSING_PF_VERSION_MAJ))
+                ERR_PF_PARSING_VERSION_MAJ))
             ;; Todo: check major version
             (cursor-version-min (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-version-maj)) 
-                ERR_PARSING_PF_VERSION_MIN))
+                ERR_PF_PARSING_VERSION_MIN))
             ;; Todo: check minor version
             (cursor-header-size (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-version-min)) 
-                ERR_PARSING_PF_TRAILING_HEADER_SIZE))
+                ERR_PF_PARSING_TRAILING_HEADER_SIZE))
             ;; Todo: check minor version
             (cursor-payload-id (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-header-size)) 
-                ERR_PARSING_PF_PAYLOAD_ID)))
+                ERR_PF_PARSING_PAYLOAD_ID)))
             (ok {
                 value: {
                     magic: (get value cursor-magic),
@@ -133,7 +201,7 @@
         }))
 
 (define-private (parse-price-attestation (cue-position uint) (acc { attestations-bytes: (buff 2048), result: (list 64 {
-            price-identifier: (buff 32),
+            price-feed-id: (buff 32),
             price: (buff 8),
             conf: (buff 8),
             expo: (buff 4),
@@ -149,8 +217,8 @@
     (let (
         
         (cursor-obsolete-1 (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-32 { bytes: (get attestations-bytes acc), pos: cue-position })))
-        (cursor-price-identifier (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-obsolete-1))))
-        (cursor-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price-identifier))))
+        (cursor-price-feed-id (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-obsolete-1))))
+        (cursor-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price-feed-id))))
         (cursor-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price))))
         (cursor-expo (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-4 (get next cursor-conf))))
         (cursor-ema-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-expo))))
@@ -167,7 +235,7 @@
     {
         attestations-bytes: (get attestations-bytes acc),
         result: (unwrap-panic (as-max-len? (append (get result acc) {
-            price-identifier: (get value cursor-price-identifier),
+            price-feed-id: (get value cursor-price-feed-id),
             price: (get value cursor-price),
             conf: (get value cursor-conf),
             expo: (get value cursor-expo),
@@ -183,7 +251,7 @@
     }))
 
 (define-private (decode-price-attestation (element {
-            price-identifier: (buff 32),
+            price-feed-id: (buff 32),
             price: (buff 8),
             conf: (buff 8),
             expo: (buff 4),
@@ -197,7 +265,7 @@
             prev-conf: (buff 8),
         }))
     {
-        price-identifier: (get price-identifier element),
+        price-feed-id: (get price-feed-id element),
         price: (buff-to-int-be (get price element)),
         conf: (buff-to-uint-be (get conf element)),
         expo: (buff-to-int-be (get expo element)),
@@ -211,63 +279,74 @@
         prev-conf: (buff-to-uint-be (get prev-conf element)),
     })
 
-(define-public (parse-and-verify-price-attestations (pf-bytes (buff 2048)))
-    (let ((cursor-price-attestations-header (try! (parse-price-attestations-header pf-bytes)))
-        (cursor-attestations-count (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-price-attestations-header)) 
-            ERR_PARSING_PF_ATTESTATION_COUNT))
-        (cursor-attestation-size (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-attestations-count)) 
-            ERR_PARSING_PF_ATTESTATION_SIZE))
-        (attestations-bytes (print (unwrap! (slice? pf-bytes (get pos (get next cursor-attestation-size)) (+ (get pos (get next cursor-attestation-size)) (* (get value cursor-attestations-count) (get value cursor-attestation-size))))
-            ERR_SLICING_PF_ATTESTATION_BYTES)))
-        (attestations-cues (get result (fold is-price-attestation-cue attestations-bytes { size: (get value cursor-attestation-size), cursor: u0, result: (unwrap-panic (as-max-len? (list u0) u64)) })))
-        (encoded-price-attestations (get result (fold parse-price-attestation attestations-cues { attestations-bytes: attestations-bytes, result: (unwrap-panic (as-max-len? (list {
-            price-identifier: (unwrap-panic (as-max-len? 0x u32)),
-            price: (unwrap-panic (as-max-len? 0x u8)),
-            conf: (unwrap-panic (as-max-len? 0x u8)),
-            expo: (unwrap-panic (as-max-len? 0x u4)),
-            ema-price: (unwrap-panic (as-max-len? 0x u8)),
-            ema-conf: (unwrap-panic (as-max-len? 0x u8)),
-            status: (unwrap-panic (as-max-len? 0x u1)),
-            attestation-time: (unwrap-panic (as-max-len? 0x u8)),
-            publish-time: (unwrap-panic (as-max-len? 0x u8)),
-            prev-publish-time: (unwrap-panic (as-max-len? 0x u8)),
-            prev-price: (unwrap-panic (as-max-len? 0x u8)),
-            prev-conf: (unwrap-panic (as-max-len? 0x u8)),
-        }) u64)) })))
-        (price-attestations (map decode-price-attestation (unwrap-panic (slice? encoded-price-attestations u1 (+ u1 (get value cursor-attestations-count))))))
-    ;; Todo: check minor version
-    ;;   (cursor-trailing-header-size (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-price-feed-header)) 
-    ;;     ERR_PARSING_PF_TRAILING_HEADER_SIZE))
-    ;;   (cursor-udpate-type (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-trailing-header-size)) 
-    ;;     ERR_PARSING_PF_VERSION_MIN))
-        
-    ;;   (cursor-guardian-set (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-version)) 
-    ;;     ERR_PARSING_VAA_GUARDIAN_SET))
-    ;;   (cursor-signatures (fold 
-    ;;     batch-read-signatures
-    ;;     (list u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0)
-    ;;     { 
-    ;;         next: (get next cursor-signatures-len), 
-    ;;         value: (list),
-    ;;         iter: (get value cursor-signatures-len)
-    ;;     }))
-    )
-        (ok {
-            price-attestations-header: (get value cursor-price-attestations-header),
-            attestations-count: (get value cursor-attestations-count),
-            attestation-size: (get value cursor-attestation-size),
-            ;; encoded-price-attestations: encoded-price-attestations,
-            attestations-cues: attestations-cues,
-            price-attestations: price-attestations
-        })))
+(define-private (process-prices-attestations-batch (batch-res (response { attestation-size: uint, attestations-count: uint, price-attestations: (list 254 {
+            price-feed-id: (buff 32),
+            price: int,
+            conf: uint,
+            expo: int,
+            ema-price: int,
+            ema-conf: uint,
+            status: uint,
+            attestation-time: uint,
+            publish-time: uint,
+            prev-publish-time: uint,
+            prev-price: int,
+            prev-conf: uint,
+        })} uint)) (acc { input: (list 2048 (buff 32)), updated-prices-feeds: (list 2048 (buff 32)) }))
+    (let ((batch (unwrap-panic batch-res))
+          (updated-prices-feeds (get updated-prices-feeds (fold process-price-attestation (get price-attestations batch) acc))))
+        {
+            input: (get input acc),
+            updated-prices-feeds: updated-prices-feeds
+        }))
+
+(define-private (process-price-attestation (prices-attestation {
+            price-feed-id: (buff 32),
+            price: int,
+            conf: uint,
+            expo: int,
+            ema-price: int,
+            ema-conf: uint,
+            status: uint,
+            attestation-time: uint,
+            publish-time: uint,
+            prev-publish-time: uint,
+            prev-price: int,
+            prev-conf: uint,
+        }) (acc { input: (list 2048 (buff 32)), updated-prices-feeds: (list 2048 (buff 32)) }))
+    (match (index-of? (get input acc) (get price-feed-id prices-attestation)) 
+        index (begin 
+                (map-set prices 
+                    { 
+                        price-feed-id: (get price-feed-id prices-attestation), 
+                    }
+                    {
+                        price: (get price prices-attestation), 
+                        conf: (get conf prices-attestation), 
+                        expo: (get expo prices-attestation), 
+                        ema-price: (get ema-price prices-attestation), 
+                        ema-conf: (get ema-conf prices-attestation), 
+                        status: (get status prices-attestation), 
+                        attestation-time: (get attestation-time prices-attestation), 
+                        publish-time: (get publish-time prices-attestation), 
+                        prev-publish-time: (get prev-publish-time prices-attestation), 
+                        prev-price: (get prev-price prices-attestation), 
+                        prev-conf: (get prev-conf prices-attestation), 
+                    })
+                {
+                    input: (get input acc),
+                    updated-prices-feeds: (unwrap-panic (as-max-len? (append (get updated-prices-feeds acc) (get price-feed-id prices-attestation)) u2048))
+                })
+        acc)
+)
 
 (define-private (parse-and-verify-price-feed (pf-bytes (buff 2048)))
         (let ((cursor-price-feed-header (try! (parse-price-feed-header pf-bytes)))
         ;; Todo: check minor version
           (cursor-trailing-header-size (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-price-feed-header)) 
-            ERR_PARSING_PF_TRAILING_HEADER_SIZE))
+            ERR_PF_PARSING_TRAILING_HEADER_SIZE))
           (cursor-udpate-type (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-trailing-header-size)) 
-            ERR_PARSING_PF_VERSION_MIN))
+            ERR_PF_PARSING_VERSION_MIN))
         ;;   (cursor-guardian-set (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-version)) 
         ;;     ERR_PARSING_VAA_GUARDIAN_SET))
         ;;   (cursor-signatures (fold 
