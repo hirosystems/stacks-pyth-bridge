@@ -93,21 +93,24 @@ The operator will start fetching prices from the Pyth network Price API, and sub
 The `pyth-oracle-v1` contract is exposing the following readonly method:
 
 ```clarity
-(define-read-only (read-price 
-    (price-feed-id (buff 32))
-    (timestamp (option uint))))
+(define-read-only (read-price-feed 
+    (price-feed-id (buff 32))))
 ```
  
 That can be consumed with the following invocation:
 
 ```clarity
 (contract-call? 
-    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-price-feed-oracle-v1    ;; Address of the oracle contract
-    0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b      ;; Price feed Id desired
-    none)                                                                   ;; Timestamp (default: latest)
+    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-price-feed-oracle-v1  ;; Address of the oracle contract
+    0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b)
 ```
 
 The authenticity of the price feeds are verified during their ingestion, making the cost of queries as light as it could be.
+
+Each Pyth Network price feed is referred to via a unique id. Price feeds also have different ids in mainnets than testnets or devnets. The full list of price feeds is listed on the [pyth.network website](https://pyth.network/price-feeds/). The price feed ids page lists the id of each available price feed on every chain where they are available. To use a price feed on-chain, look up its id using these pages, then store the feed id in your program to use for price feed queries.
+
+Price Feeds usage and best practices are described on the [pyth.network developer documentation website](https://docs.pyth.network/pythnet-price-feeds/best-practices). 
+
 
 
 ### Offchain
@@ -115,7 +118,22 @@ The authenticity of the price feeds are verified during their ingestion, making 
 For every new price recorded and stored on chain, the `pyth-oracle-v1` is emitting an event with the following shape:
 
 ```clarity
-(print { type: "price-feed", action: "update", data: ... })
+(print { 
+    type: "price-feed", 
+    action: "updated", 
+    data: { 
+        attestation-time: u1686854317, 
+        conf: u2064471426, 
+        ema-conf: u1891952230, 
+        ema-price: 2507095440000, 
+        expo: 4294967288, 
+        prev-conf: u2064471426, 
+        prev-price: 2515455528574, 
+        prev-publish-time: u1686854316, 
+        price: 2515455528574, 
+        publish-time: u1686854317, 
+        status: u1
+     } })
 ```
 
-These events can be observed using [Chainhook](https://github.com/hirosystems/chainhook), with a predicate
+These events can be observed using [Chainhook](https://github.com/hirosystems/chainhook), using the `print` predicates.
