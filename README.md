@@ -93,7 +93,7 @@ The operator will start fetching prices from the Pyth network Price API, and sub
 The `pyth-oracle-v1` contract is exposing the following readonly method:
 
 ```clarity
-(define-readonly (read-price 
+(define-read-only (read-price 
     (price-feed-id (buff 32))
     (timestamp (option uint))))
 ```
@@ -102,9 +102,9 @@ That can be consumed with the following invocation:
 
 ```clarity
 (contract-call? 
-    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-price-feed-oracle-v1
-    0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b
-    none)
+    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-price-feed-oracle-v1    ;; Address of the oracle contract
+    0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b      ;; Price feed Id desired
+    none)                                                                   ;; Timestamp (default: latest)
 ```
 
 The authenticity of the price feeds are verified during their ingestion, making the cost of queries as light as it could be.
