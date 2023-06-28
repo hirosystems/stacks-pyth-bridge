@@ -103,7 +103,8 @@ That can be consumed with the following invocation:
 
 ```clarity
 (contract-call? 
-    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-price-feed-oracle-v1  ;; Address of the oracle contract
+    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-oracle-v1  ;; Address of the oracle contract
+    read-price-feed
     0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b)
 ```
 
