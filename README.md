@@ -2,15 +2,17 @@
 
 **Status**: *Alpha, do not use in production*
 
-Stacks is a blockchain linked to Bitcoin by its consensus mechanism that spans the two chains, called Proof of Transfer. This enables Stacks to leverage Bitcoin’s security and enables Stacks apps to use Bitcoin’s state.
+[Stacks](http://stacks.co) is a blockchain linked to Bitcoin by its consensus mechanism that spans the two chains, called Proof of Transfer. This enables Stacks to leverage Bitcoin’s security and enables Stacks apps to use Bitcoin’s state.
 Stacks is a Bitcoin layer that enables decentralized apps and smart contracts.
 
-Pyth Network is an oracle that publishes financial market data to multiple blockchains. The market data is contributed by over 80 first-party publishers, including some of the biggest exchanges and market making firms in the world. Pyth offer price feeds for a number of different asset classes, including US equities, commodities, and cryptocurrencies. Each price feed publishes a robust aggregate of publisher prices that updates multiple times per second.
+[Pyth Network](https://pyth.network) is an oracle that publishes financial market data to multiple blockchains. The market data is contributed by over 80 first-party publishers, including some of the biggest exchanges and market making firms in the world. Pyth offer price feeds for a number of different asset classes, including US equities, commodities, and cryptocurrencies. Each price feed publishes a robust aggregate of publisher prices that updates multiple times per second.
 Price feeds are available on multiple blockchains and can also be used in off-chain applications.
+
+[Wormhole](https://wormhole.com) is a decentralized attestation engine that leverages its network of guardians to trustlessly bridge information between the chains it supports. Wormhole has a simple, elegant, and pragmatic design that has enabled it to be the first real solution to ship to market and has received wide recognition and support from its member chains.
 
 ## Setup and Test a Devnet Bridge
 
-The bridge is being operated through an offchain service `stacks-pyth-relayer` and a set of contracts implementing the core functionalities specified by the Wormhole protocol, along with . 
+The bridge is being operated through an offchain service `stacks-pyth-relayer` and a set of contracts implementing the core functionalities specified by the Wormhole protocol. 
 
 The contracts are developped in Clarity and is using Clarinet for its test harnessing.
 This guide is assuming that a recent installation of Clarinet (available on brew and winget) is available locally. 
