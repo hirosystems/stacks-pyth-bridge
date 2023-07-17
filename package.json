@@ -1,0 +1,19 @@
+{
+  "name": "stacks-pyth-testing",
+  "version": "1.0.0",
+  "description": "**Status**: *Alpha, do not use in production*",
+  "main": "index.js",
+  "directories": {
+    "test": "unit-tests"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@stacks/transactions": "^6.5.4",
+    "obscurity-sdk": "^0.0.3"
+  }
+}
