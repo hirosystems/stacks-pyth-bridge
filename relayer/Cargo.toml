@@ -8,7 +8,7 @@ serde = "1"
 serde_derive = "1"
 hex = "0.4.3"
 rand = "0.8.5"
-chainhook-sdk = { version = "=0.5.0", default-features = false, features = ["log"] }
+chainhook-sdk = { version = "0.7.3", default-features = false, features = ["log"] }
 hiro-system-kit = { version = "0.1.0", features = ["log"] }
 toml = { version = "0.5.11", features = ["preserve_order"] }
 ctrlc = { version = "3.2.2", optional = true }
