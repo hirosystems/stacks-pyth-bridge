@@ -6,8 +6,10 @@ import { main } from "obscurity-sdk";
 import { Cl } from "@stacks/transactions";
 import { mainnet_valid_guardians_set_upgrades, mainnet_valid_pfs } from "./constants.js";
 
-describe("Wormhole testsuite", () => {
+describe("Pyth testsuite", () => {
   const cost = 1000000n;
+  const pyth_oracle_v1_contract_name = "pyth-oracle-v1";
+  let pyth_oracle_v1_contract_addr;
   let wormhole_core_v1_contract_name = "wormhole-core-v1";
   let wormhole_core_v1_contract_addr;
   let deployer;
@@ -21,11 +23,12 @@ describe("Wormhole testsuite", () => {
     
     const accounts = session.getAccounts();
     deployer = accounts.get("deployer");
+    pyth_oracle_v1_contract_addr = `${deployer}.${pyth_oracle_v1_contract_name}`;
     wormhole_core_v1_contract_addr = `${deployer}.${wormhole_core_v1_contract_name}`;
     sender = accounts.get("wallet_1");
   });
 
-  it("ensure that guardians set can be rotated", () => {
+  it("ensure that legitimate price attestations are validated", () => {
 
     const vaaRotation1 = Cl.bufferFromHex(mainnet_valid_guardians_set_upgrades[0].vaa);
     let publicKeysRotation1 = [];
@@ -51,15 +54,10 @@ describe("Wormhole testsuite", () => {
 
     session.callPublicFn(wormhole_core_v1_contract_name, "update-guardians-set", [vaaRotation3, Cl.list(publicKeysRotation3)], sender);
 
-    // // assert: review returned data, contract state, and other requirements
-    // assertEquals(block.receipts.length, 3);
-    // const rotation1 = block.receipts[0].result;
-    // rotation1.expectOk()
+    const vaaBytes = Cl.bufferFromHex(mainnet_valid_pfs[0]);
 
-    // const rotation2 = block.receipts[1].result;
-    // rotation2.expectOk()
+    let res = session.callPublicFn(pyth_oracle_v1_contract_name, "update-prices-feeds", [Cl.list([vaaBytes])], sender);
 
-    // const rotation3 = block.receipts[2].result;
-    // rotation3.expectOk()
+    console.log(res);
   });
 });

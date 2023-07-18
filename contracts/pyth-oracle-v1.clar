@@ -237,7 +237,7 @@
     }))
 
 (define-private (decode-price-attestation 
-      (element {
+      (entry {
         price-feed-id: (buff 32),
         price: (buff 8),
         conf: (buff 8),
@@ -252,18 +252,18 @@
         prev-conf: (buff 8)
       }))
   {
-    price-feed-id: (get price-feed-id element),
-    price: (buff-to-int-be (get price element)),
-    conf: (buff-to-uint-be (get conf element)),
-    expo: (buff-to-int-be (get expo element)),
-    ema-price: (buff-to-int-be (get ema-price element)),
-    ema-conf: (buff-to-uint-be (get ema-conf element)),
-    status: (buff-to-uint-be (get status element)),
-    attestation-time: (buff-to-uint-be (get attestation-time element)),
-    publish-time: (buff-to-uint-be (get publish-time element)),
-    prev-publish-time: (buff-to-uint-be (get prev-publish-time element)),
-    prev-price: (buff-to-int-be (get prev-price element)),
-    prev-conf: (buff-to-uint-be (get prev-conf element)),
+    price-feed-id: (get price-feed-id entry),
+    price: (buff-to-int-be (get price entry)),
+    conf: (buff-to-uint-be (get conf entry)),
+    expo: (buff-to-int-be (get expo entry)),
+    ema-price: (buff-to-int-be (get ema-price entry)),
+    ema-conf: (buff-to-uint-be (get ema-conf entry)),
+    status: (buff-to-uint-be (get status entry)),
+    attestation-time: (buff-to-uint-be (get attestation-time entry)),
+    publish-time: (buff-to-uint-be (get publish-time entry)),
+    prev-publish-time: (buff-to-uint-be (get prev-publish-time entry)),
+    prev-price: (buff-to-int-be (get prev-price entry)),
+    prev-conf: (buff-to-uint-be (get prev-conf entry)),
   })
 
 (define-private (process-prices-attestations-batch 

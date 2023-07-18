@@ -14,6 +14,6 @@
   "type": "module",
   "dependencies": {
     "@stacks/transactions": "^6.5.4",
-    "obscurity-sdk": "^0.0.3"
+    "obscurity-sdk": "^0.0.4"
   }
 }
