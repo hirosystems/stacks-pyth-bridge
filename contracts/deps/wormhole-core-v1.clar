@@ -3,6 +3,11 @@
 ;; Summary:
 ;; Description:
 
+;;;; Traits
+
+;; Implements trait specified in wormhole-core-trait contract
+(impl-trait .wormhole-core-trait.wormhole-core-trait)
+
 ;;;; Constants
 
 ;; Generic error
