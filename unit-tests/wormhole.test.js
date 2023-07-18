@@ -66,7 +66,7 @@ describe("Wormhole testsuite", () => {
     console.warn(vaaRotation3);
 
 
-    session.callPublicFn(wormhole_core_v1_contract_addr, "update-guardians-set", [vaaRotation1, Cl.list(publicKeysRotation1)], sender);
+    session.callPublicFn(wormhole_core_v1_contract_name, "update-guardians-set", [vaaRotation1, Cl.list(publicKeysRotation1)], sender);
 
     // session.callPublicFn(wormhole_core_v1_contract_addr, "update-guardians-set", [vaaRotation2, Cl.list(publicKeysRotation2)], sender);
 
