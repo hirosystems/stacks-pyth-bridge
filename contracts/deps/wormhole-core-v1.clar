@@ -79,7 +79,9 @@
 ;;;; Data maps
 
 ;; Map tracking guardians set
-(define-map guardian-sets uint (list 19 { compressed-public-key: (buff 33), uncompressed-public-key: (buff 64) }))
+(define-map guardian-sets 
+  { set-id: uint } 
+  (list 19 { compressed-public-key: (buff 33), uncompressed-public-key: (buff 64) }))
 
 ;;;; Public functions
 
@@ -158,7 +160,7 @@
 ;; @param vaa-bytes: 
 (define-read-only (parse-and-verify-vaa (vaa-bytes (buff 2048)))
   (let ((vaa (try! (parse-vaa vaa-bytes)))
-        (active-guardians (unwrap! (map-get? guardian-sets (var-get active-guardian-set)) ERR_VAA_CHECKS_GUARDIAN_SET_CONSISTENCY))
+        (active-guardians (unwrap! (map-get? guardian-sets { set-id: (var-get active-guardian-set) }) ERR_VAA_CHECKS_GUARDIAN_SET_CONSISTENCY))
         (signatures-from-active-guardians (fold batch-check-active-public-keys (get guardians-public-keys vaa)
           {
               active-guardians: active-guardians,
@@ -203,7 +205,7 @@
     (asserts! (get success consolidated-public-keys)
       ERR_GSU_UNCOMPRESSED_PUBLIC_KEYS)
 
-    (map-set guardian-sets set-id 
+    (map-set guardian-sets { set-id: set-id } 
       (unwrap-panic (as-max-len? 
         (unwrap-panic (slice? (get result consolidated-public-keys) u1 (len (get result consolidated-public-keys)))) 
         u19)))
@@ -216,7 +218,7 @@
 
 (define-public (get-active-guardian-set) 
   (let ((set-id (var-get active-guardian-set))
-        (guardians (unwrap-panic (map-get? guardian-sets set-id))))
+        (guardians (unwrap-panic (map-get? guardian-sets { set-id: set-id }))))
       (ok {
         set-id: set-id,
         guardians: guardians
