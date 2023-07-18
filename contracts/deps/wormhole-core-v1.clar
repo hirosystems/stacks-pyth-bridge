@@ -337,26 +337,26 @@
     ;; Good to go!
     (ok {
       value: {
-          guardians-eth-addresses: (unwrap-panic (as-max-len? (unwrap-panic (slice? eth-addresses u1 (+ u1 (get value cursor-guardians-count)))) u19)),
-          module: (get value cursor-module),
-          action: (get value cursor-action),
-          chain: (get value cursor-chain),
-          new-index: (get value cursor-new-index)
+        guardians-eth-addresses: (unwrap-panic (as-max-len? (unwrap-panic (slice? eth-addresses u1 (+ u1 (get value cursor-guardians-count)))) u19)),
+        module: (get value cursor-module),
+        action: (get value cursor-action),
+        chain: (get value cursor-chain),
+        new-index: (get value cursor-new-index)
       },
       next: { 
-          bytes: bytes, 
-          pos: (+ (get pos (get next cursor-guardians-count)) 
-                  (* (get value cursor-guardians-count) u20)) 
+        bytes: bytes, 
+        pos: (+ (get pos (get next cursor-guardians-count)) 
+                (* (get value cursor-guardians-count) u20)) 
       }
     })))
 
 (define-private (is-guardian-cue (byte (buff 1)) (acc { cursor: uint, result: (list 19 uint) }))
   (if (and (is-eq u0 (mod (get cursor acc) u20)) (> (get cursor acc) u0) )
     { 
-        cursor: (+ u1 (get cursor acc)), 
-        result: (unwrap-panic (as-max-len? (append (get result acc) (get cursor acc)) u19)),
+      cursor: (+ u1 (get cursor acc)), 
+      result: (unwrap-panic (as-max-len? (append (get result acc) (get cursor acc)) u19)),
     }
     {
-        cursor: (+ u1 (get cursor acc)), 
-        result: (get result acc),
+      cursor: (+ u1 (get cursor acc)), 
+      result: (get result acc),
     }))
