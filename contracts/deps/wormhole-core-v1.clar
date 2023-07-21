@@ -74,7 +74,7 @@
 ;; Guardian Set Update uncompressed public keys invalid
 (define-data-var guardian-set-initialized bool false)
 ;; Keep track of the active guardian set-id
-(define-data-var active-guardian-set uint u0)
+(define-data-var active-guardian-set-id uint u0)
 
 ;;;; Data maps
 
@@ -106,9 +106,9 @@
 (define-read-only (parse-vaa (vaa-bytes (buff 2048)))
   (let ((cursor-version (unwrap! (contract-call? .hk-cursor-v1 read-u8 { bytes: vaa-bytes, pos: u0 }) 
           ERR_VAA_PARSING_VERSION))
-        (cursor-guardian-set (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-version)) 
+        (cursor-guardian-set-id (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-version)) 
           ERR_VAA_PARSING_GUARDIAN_SET))
-        (cursor-signatures-len (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-guardian-set)) 
+        (cursor-signatures-len (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-guardian-set-id)) 
           ERR_VAA_PARSING_SIGNATURES_LEN))
         (cursor-signatures (fold 
           batch-read-signatures
@@ -143,7 +143,7 @@
           })))
     (ok { 
         version: (get value cursor-version), 
-        guardian-set: (get value cursor-guardian-set),
+        guardian-set-id: (get value cursor-guardian-set-id),
         signatures-len: (get value cursor-signatures-len),
         signatures: (get value cursor-signatures),
         timestamp: (get value cursor-timestamp),
@@ -160,12 +160,14 @@
 ;; @param vaa-bytes: 
 (define-read-only (parse-and-verify-vaa (vaa-bytes (buff 2048)))
   (let ((vaa (try! (parse-vaa vaa-bytes)))
-        (active-guardians (unwrap! (map-get? guardian-sets { set-id: (var-get active-guardian-set) }) ERR_VAA_CHECKS_GUARDIAN_SET_CONSISTENCY))
+        (active-guardians (unwrap! (map-get? guardian-sets { set-id: (get guardian-set-id vaa) }) ERR_VAA_CHECKS_GUARDIAN_SET_CONSISTENCY))
         (signatures-from-active-guardians (fold batch-check-active-public-keys (get guardians-public-keys vaa)
           {
               active-guardians: active-guardians,
               value: (unwrap-panic (as-max-len? (list (unwrap-panic (as-max-len? 0x u33))) u20))
           })))
+    ;; Ensure that the guardian-set-id is the active one
+    (asserts! (is-eq (get guardian-set-id vaa) (var-get active-guardian-set-id)) ERR_VAA_CHECKS_GUARDIAN_SET_CONSISTENCY)
     ;; Ensure that version is supported (v1 only)
     (asserts! (is-eq (get version vaa) u1) ERR_VAA_CHECKS_VERSION_UNSUPPORTED)
     ;; Ensure that the count of valid signatures is >= 13
@@ -209,7 +211,7 @@
       (unwrap-panic (as-max-len? 
         (unwrap-panic (slice? (get result consolidated-public-keys) u1 (len (get result consolidated-public-keys)))) 
         u19)))
-    (var-set active-guardian-set set-id)
+    (var-set active-guardian-set-id set-id)
     (var-set guardian-set-initialized true)
     (ok {
       vaa: vaa,
@@ -217,7 +219,7 @@
     })))
 
 (define-public (get-active-guardian-set) 
-  (let ((set-id (var-get active-guardian-set))
+  (let ((set-id (var-get active-guardian-set-id))
         (guardians (unwrap-panic (map-get? guardian-sets { set-id: set-id }))))
       (ok {
         set-id: set-id,
@@ -303,7 +305,7 @@
 ;; @param expiration-time:
 ;; @param guardians:
 (define-private (insert-entry-in-guardians (expiration-time uint) (new-set-id uint) (new-guardians (list 19 { uncompressed-public-key: (buff 64), compressed-public-key: (buff 33) })))
-  (let ((set-id (var-get active-guardian-set)))
+  (let ((set-id (var-get active-guardian-set-id)))
     ;; TODO: check authorization
     ;; Update set
     ;; (fold add-guardian-to-guardian-set guardians { id: u0, set-id: new-set-id })
@@ -339,7 +341,7 @@
     (asserts! (is-eq (get value cursor-chain) u0) 
       ERR_GSU_CHECK_CHAIN)
     ;; Ensure that next index > current index
-    (asserts! (> (get value cursor-new-index) (var-get active-guardian-set)) 
+    (asserts! (> (get value cursor-new-index) (var-get active-guardian-set-id)) 
       ERR_GSU_CHECK_INDEX)
     ;; Good to go!
     (ok {

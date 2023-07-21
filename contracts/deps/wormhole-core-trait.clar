@@ -3,7 +3,7 @@
     ;; Parse and Verify cryptographic validity of a VAA
     (parse-and-verify-vaa ((buff 2048)) (response {
         version: uint, 
-        guardian-set: uint,
+        guardian-set-id: uint,
         signatures-len: uint ,
         signatures: (list 19 { guardian-id: uint, signature: (buff 65) }),
         timestamp: uint,
