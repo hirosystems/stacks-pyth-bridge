@@ -1,35 +1,21 @@
 // @ts-check
 
-import { after, before, describe, it } from "node:test";
-import fs from "node:fs";
-import assert from "node:assert/strict";
-import path from "node:path";
-import initVM from "obscurity-sdk";
+import { it } from "node:test";
+
 import { Cl } from "@stacks/transactions";
 import { mainnet_valid_guardians_set_upgrades } from "./constants.js";
+import { clarinetTest } from "./clarinetTest.js";
 
-let wormhole_core_v1_contract_name = "wormhole-core-v1";
-let wormhole_core_v1_contract_addr;
-let deployer;
-let sender;
-/** @type import("../../clarinet/components/clarinet-sdk/dist/index").ClarityVM */
-let vm;
+const pyth_oracle_v1_contract_name = "pyth-oracle-v1";
+const wormhole_core_v1_contract_name = "wormhole-core-v1";
 
-describe("Wormhole testsuite", () => {
-  before(async () => {
-    vm = await initVM();
-    await vm.initSession(process.cwd(), "./Clarinet.toml");
-
-    const accounts = vm.getAccounts();
-    deployer = accounts.get("deployer");
-    wormhole_core_v1_contract_addr = `${deployer}.${wormhole_core_v1_contract_name}`;
-    sender = accounts.get("wallet_1");
-  });
-
-  after(() => {
-    const lcov = vm.terminate();
-    fs.appendFileSync(path.join(process.cwd(), "lcov.info"), lcov);
-  });
+clarinetTest("Wormhole testsuite", (vm) => {
+  const accounts = vm.getAccounts();
+  const deployer = accounts.get("deployer");
+  const pyth_oracle_v1_contract_addr = `${deployer}.${pyth_oracle_v1_contract_name}`;
+  const wormhole_core_v1_contract_addr = `${deployer}.${wormhole_core_v1_contract_name}`;
+  const sender = accounts.get("wallet_1");
+  if (!sender) throw new Error("invalid account");
 
   it("ensure that guardians set can be rotated", () => {
     const vaaRotation1 = Cl.bufferFromHex(mainnet_valid_guardians_set_upgrades[0].vaa);
