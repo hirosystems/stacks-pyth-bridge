@@ -18,7 +18,7 @@ Clarinet.test({
         const block = chain.mineBlock([
             Tx.contractCall(
                 "pyth-oracle-v1", 
-                "update-price-feeds", 
+                "update-prices-feeds", 
                 [
                     types.list([types.buff(vaaBytes)])
                 ], 

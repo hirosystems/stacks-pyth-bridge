@@ -1,10 +1,10 @@
 pub mod file;
 pub mod generator;
 
-use chainhook_sdk::chainhook_types::StacksNetwork;
 use chainhook_sdk::observer::EventObserverConfig;
 use chainhook_sdk::stacks_rpc_client::clarity::vm::types::QualifiedContractIdentifier;
 use chainhook_sdk::stacks_rpc_client::crypto::Wallet;
+use chainhook_sdk::types::StacksNetwork;
 
 use file::ConfigFile;
 use std::fs::File;

@@ -9,8 +9,8 @@ use chainhook_sdk::stacks_rpc_client::clarity::codec::{
 use chainhook_sdk::stacks_rpc_client::clarity::vm::types::Value;
 use chainhook_sdk::stacks_rpc_client::{self, StacksRpc};
 use chainhook_sdk::{
-    chainhook_types::{BlockIdentifier, StacksChainEvent},
     observer::{start_event_observer, ObserverEvent},
+    types::{BlockIdentifier, StacksChainEvent},
     utils::Context,
 };
 use libsecp256k1::{recover, Message, PublicKey, RecoveryId, Signature};
@@ -46,14 +46,15 @@ pub fn start_bridge_service(config: &Config, ctx: &Context) -> Result<(), String
     let context_logs_disabled = Context::empty();
     let observer_cmd_tx_moved = observer_cmd_tx.clone();
     let _ = std::thread::spawn(move || {
-        let future = start_event_observer(
+        start_event_observer(
             event_observer_config,
             observer_cmd_tx_moved,
             observer_cmd_rx,
             Some(observer_event_tx),
+            None,
             context_logs_disabled,
-        );
-        let _ = hiro_system_kit::nestable_block_on(future);
+        )
+        .expect("unable to start Stacks chain observer");
     });
 
     let context_cloned = ctx.clone();
