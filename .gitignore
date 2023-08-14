@@ -6,3 +6,6 @@ history.txt
 relayer/target
 .DS_Store
 node_modules
+
+lcov.info
+coverage/

@@ -7,13 +7,18 @@
     "test": "unit-tests"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "coverage": "rimraf ./lcov.info; node --test "
   },
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
     "@stacks/transactions": "^6.5.4",
-    "obscurity-sdk": "^0.0.4"
+    "obscurity-sdk": "^0.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.4",
+    "rimraf": "^5.0.1"
   }
 }
