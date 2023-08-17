@@ -375,41 +375,48 @@ pub async fn submit_stacks_transaction(
     let encoded_vaas_list =
         Value::list_from(encoded_vaas).map_err(|e| format!("{}", e.to_string()))?;
 
-    // Compute uncompressed public keys
-
     let stacks_rpc = StacksRpc::new(&stacks_config.stacks_node_rpc_url);
-
+    let address = stacks_config.wallet.compute_stacks_address();
     let nonce = stacks_rpc
-        .get_nonce(&stacks_config.wallet.compute_stacks_address().to_string())
+        .get_nonce(&address.to_string())
         .expect("Unable to retrieve nonce");
 
-    let transaction = stacks_rpc_client::crypto::encode_contract_call(
-        &stacks_config.pyth_oracle_contract_address,
-        "update-prices-feeds".into(),
-        vec![encoded_vaas_list],
+    let transaction_payload = TransactionPayload::ContractCall(TransactionContractCall {
+        contract_name: stacks_config.pyth_oracle_contract_address.name.clone(),
+        address: stacks_config
+            .pyth_oracle_contract_address
+            .issuer
+            .clone()
+            .into(),
+        function_name: "update-prices-feeds".into(),
+        function_args: vec![encoded_vaas_list],
+    });
+
+    let tx_fee = match rbf_tracking.get(&nonce) {
+        Some(submitted_tx_fee) => submitted_tx_fee + 10,
+        None => {
+            // Assuming we moved on to the next transaction
+            rbf_tracking.clear();
+
+            match stacks_rpc.estimate_transaction_fee(
+                &transaction_payload,
+                1, /* low = 0, medium = 1, high = 2 */
+            ) {
+                Ok(fee) => fee,
+                Err(_e) => {
+                    10_000 // default fee value
+                }
+            }
+        }
+    };
+
+    let transaction = stacks_rpc_client::crypto::sign_transaction_payload(
         &stacks_config.wallet,
+        transaction_payload,
         nonce,
-        10000, // TODO: use fee estimate API
+        tx_fee,
         TransactionAnchorMode::OnChainOnly,
     )?;
-
-    // let transaction_payload =
-    //     TransactionPayload::ContractCall(TransactionContractCall {
-    //         contract_name: transaction.contract_id.name.clone(),
-    //         address: StacksAddress::from(tx.contract_id.issuer.clone()),
-    //         function_name: tx.method.clone(),
-    //         function_args: function_args,
-    //     });
-
-    // match stacks_rpc.estimate_transaction_fee(&transaction_payload, priority) {
-    //     Ok(fee) => {
-    //         tx.cost = fee;
-    //     }
-    //     Err(e) => {
-    //         println!("unable to estimate fee for transaction: {}", e.to_string());
-    //         continue;
-    //     }
-    // };
 
     match stacks_rpc.post_transaction(&transaction) {
         Ok(res) => {
