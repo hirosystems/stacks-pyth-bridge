@@ -1,15 +1,16 @@
 ;; Title: pyth-oracle
-;; Version: 1
-;; Summary:
-;; Description:
-
-;;;; Todo
-;; - Update watched price feed ids
+;; Version: Developer Preview 1
+;; Feedbacks: http://github.com/hirosystems/stacks-pyth-bridge/issues
 
 ;;;; Traits
 
 ;;;; Constants
-;;
+
+;; Price Feeds Ids (https://pyth.network/developers/price-feed-ids#pyth-evm-mainnet)
+(define-constant STX_USD 0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17)
+(define-constant BTC_USD 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43)
+(define-constant ETH_USD 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace)
+
 ;; Generic error
 (define-constant ERR_PANIC (err u0))
 ;; Unable to price feed magic bytes
@@ -56,9 +57,7 @@
 
 (define-data-var watched-price-feeds 
   (list 1024 (buff 32)) 
-  (list 
-    0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43
-    ))
+  (list STX_USD BTC_USD ETH_USD))
 
 ;;;; Public functions
 ;;
