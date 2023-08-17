@@ -43,7 +43,11 @@ pub fn start_bridge_service(config: &Config, ctx: &Context) -> Result<(), String
 
     // Start chainhook event observer
     let event_observer_config = config.event_observer.clone();
-    let context_logs_disabled = Context::empty();
+    let context = if config.event_observer.display_logs {
+        ctx.clone()
+    } else {
+        Context::empty()
+    };
     let observer_cmd_tx_moved = observer_cmd_tx.clone();
     let _ = std::thread::spawn(move || {
         start_event_observer(
@@ -52,7 +56,7 @@ pub fn start_bridge_service(config: &Config, ctx: &Context) -> Result<(), String
             observer_cmd_rx,
             Some(observer_event_tx),
             None,
-            context_logs_disabled,
+            context,
         )
         .expect("unable to start Stacks chain observer");
     });
