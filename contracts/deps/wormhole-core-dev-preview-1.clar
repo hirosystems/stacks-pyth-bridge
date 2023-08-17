@@ -3,6 +3,11 @@
 ;; Summary:
 ;; Description:
 
+;;;; Todo
+;; - Check for non redundant signatures
+;; - Double check the approach uncompressed / compressed / eth address
+;; - Transition to new guardian sets
+
 ;;;; Traits
 
 ;; Implements trait specified in wormhole-core-trait contract
