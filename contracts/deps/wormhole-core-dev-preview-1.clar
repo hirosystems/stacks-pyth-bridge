@@ -1,11 +1,7 @@
 ;; Title: wormhole-core
 ;; Version: Developer Preview 1
-;; Feedbacks: http://github.com/hirosystems/stacks-pyth-bridge/issues
-
-;;;; Todo
-;; - Check for non redundant signatures
-;; - Double check the approach uncompressed / compressed / eth address
-;; - Transition to new guardian sets
+;; Check for latest version: https://github.com/hirosystems/stacks-pyth-bridge#latest-version
+;; Report an issue: https://github.com/hirosystems/stacks-pyth-bridge/issues
 
 ;;;; Traits
 

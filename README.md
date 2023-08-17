@@ -105,6 +105,13 @@ The operator will start fetching prices from the Pyth network Price API, and sub
 
 ## How to consume the price feeds
 
+### Latest Version
+
+| network | address |
+|---------|---------------------------------------------------------------------|
+| testnet | ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR.pyth-oracle-dev-preview-1 |
+| mainnet | SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.pyth-oracle-dev-preview-1 |
+
 
 ### Onchain
 
