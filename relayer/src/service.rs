@@ -426,7 +426,7 @@ pub async fn submit_stacks_transaction(
             );
         }
         Err(e) => {
-            error!(
+            warn!(
                 ctx.expect_logger(),
                 "Unable to submit price feed update: {}",
                 e.to_string()
