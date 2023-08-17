@@ -3,8 +3,10 @@
 ;; Summary:
 ;; Description:
 
-;;;; Traits
+;;;; Todo
+;; - Update watched price feed ids
 
+;;;; Traits
 
 ;;;; Constants
 ;;
@@ -137,7 +139,7 @@
 ;;;; Private functions
 ;;
 (define-private (parse-and-verify-vaa (vaa-bytes (buff 2048)))
-  (let ((vaa (unwrap-panic (contract-call? .wormhole-core-v1 parse-and-verify-vaa vaa-bytes))))
+  (let ((vaa (unwrap-panic (contract-call? .wormhole-core-dev-preview-1 parse-and-verify-vaa vaa-bytes)))) ;; try!
     (get payload vaa)))
 
 (define-private (parse-price-feed-header (pf-bytes (buff 2048)))
