@@ -10,10 +10,9 @@ price_feeds_ids = [
 
 [stacks]
 network = "devnet"
-stacks_node_rpc_url = "http://localhost:20443"
-mnemonic = "prevent gallery kind limb income control noise together echo rival record wedding sense uncover school version force bleak nuclear include danger skirt enact arrow"
-# pyth_oracle_contract_address = "SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.pyth-oracle-dev-preview-1"
+stacks_node_rpc_url = "http://localhost:30443"
 pyth_oracle_contract_address = "ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR.pyth-oracle-dev-preview-1"
+mnemonic = "***"
 derivation_path = "m/44'/5757'/0'/0/0"
 start_block = 6
 
@@ -23,4 +22,7 @@ enable_rbf = true
 enable_microbloks = true
 
 [event_observer]
-ingestion_port = 10000
+ingestion_port = 30456
+bitcoind_rpc_username = "devnet"
+bitcoind_rpc_password = "devnet"
+bitcoind_rpc_url = "http://localhost:18332"
