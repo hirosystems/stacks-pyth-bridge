@@ -85,7 +85,7 @@ impl Config {
         };
         let pyth_oracle_contract_address =
             QualifiedContractIdentifier::parse(&config_file.stacks.pyth_oracle_contract_address)
-                .map_err(|e| format!("unable to parse pyth_oracle_contract_address"))?;
+                .map_err(|_e| format!("unable to parse pyth_oracle_contract_address"))?;
 
         let config = Config {
             pyth: PythConfig {
