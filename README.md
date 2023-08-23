@@ -138,6 +138,21 @@ Each Pyth Network price feed is referred to via a unique id. Price feeds also ha
 Price Feeds usage and best practices are described on the [pyth.network developer documentation website](https://docs.pyth.network/pythnet-price-feeds/best-practices). 
 
 
+#### Prices currently supported on Testnet
+
+| Pair    | Price Feed ID |
+|---------|--------------------------------------------------------------------|
+| STX-USD | 0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17 |
+
+#### Prices currently supported on Mainnet
+
+| Pair    | Price Feed ID |
+|---------|--------------------------------------------------------------------|
+| STX-USD | 0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17 |
+| BTC-USD | 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43 |
+| ETH-USD | 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace |
+
+Feel free to open an issue on this repo if more prices are required for your application. The full list of prices is available [here](https://pyth.network/price-feeds/).
 
 ### Offchain
 
