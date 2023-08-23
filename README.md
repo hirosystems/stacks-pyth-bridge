@@ -14,7 +14,7 @@
 
 # Introduction
 
-**Status**: *Alpha, do not use in production*
+**Status**: **Developer Preview** This initial release is a Developer Preview of the Stacks x Pyth integration. The integration is live on both testnet and mainnet and is meant primarily for developers to test, give feedback and ensure reliability and stability of the integration.Developer Release*
 
 [Stacks](http://stacks.co) is a blockchain linked to Bitcoin by its consensus mechanism that spans the two chains, called Proof of Transfer. This enables Stacks to leverage Bitcoin’s security and enables Stacks apps to use Bitcoin’s state.
 Stacks is a Bitcoin layer that enables decentralized apps and smart contracts.
