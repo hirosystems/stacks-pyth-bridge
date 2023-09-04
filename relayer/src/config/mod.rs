@@ -43,7 +43,7 @@ pub struct StacksConfig {
 #[derive(Clone, Debug)]
 pub struct BridgeConfig {
     pub price_updates_per_minute: u64,
-    pub enable_microbloks: bool,
+    pub enable_microblocks: bool,
     pub enable_rbf: bool,
 }
 
@@ -102,7 +102,7 @@ impl Config {
             },
             bridge: BridgeConfig {
                 price_updates_per_minute: config_file.bridge.price_updates_per_minute,
-                enable_microbloks: config_file.bridge.enable_microbloks,
+                enable_microblocks: config_file.bridge.enable_microblocks.unwrap_or(false),
                 enable_rbf: config_file.bridge.enable_rbf,
             },
             event_observer,

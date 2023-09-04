@@ -35,6 +35,6 @@ pub struct StacksConfigFile {
 #[derive(Deserialize, Debug, Clone)]
 pub struct BridgeConfigFile {
     pub price_updates_per_minute: u64,
-    pub enable_microbloks: bool,
+    pub enable_microblocks: Option<bool>,
     pub enable_rbf: bool,
 }
