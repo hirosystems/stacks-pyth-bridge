@@ -82,7 +82,7 @@ start_block = 6
 [bridge]
 price_updates_per_minute = 5
 enable_rbf = true
-enable_microbloks = true
+enable_microblocks = true
 
 [event_observer]
 ingestion_port = 10000
