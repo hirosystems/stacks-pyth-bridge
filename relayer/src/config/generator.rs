@@ -18,7 +18,7 @@ mnemonic = "prevent gallery kind limb income control noise together echo rival r
 [bridge]
 price_updates_per_minute = 5
 enable_rbf = true
-enable_microbloks = true
+enable_microblocks = true
 "#
     );
     return conf;

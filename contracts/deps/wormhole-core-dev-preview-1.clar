@@ -172,8 +172,6 @@
     (asserts! (is-eq (get version vaa) u1) ERR_VAA_CHECKS_VERSION_UNSUPPORTED)
     ;; Ensure that the count of valid signatures is >= 13
     (asserts! (>= (len (get value signatures-from-active-guardians)) u13) ERR_VAA_CHECKS_THRESHOLD_SIGNATURE)
-    ;; Ensure that each guardian in signatures-from-active-guardians is unique
-    ;; ERR_VAA_CHECKS_REDUNDANT_SIGNATURE
     ;; TODO: Ensure that the guardian set is not expired
     ;; ERR_VAA_CHECKS_GUARDIAN_SET_EXPIRED
     ;; Good to go!
@@ -261,8 +259,13 @@
       (acc { active-guardians: (list 19 { compressed-public-key: (buff 33), uncompressed-public-key: (buff 64) }), value: (list 20 (buff 33))}))
    (let ((compressed-public-key (get compressed-public-key (unwrap-panic (element-at? (get active-guardians acc) (get guardian-id entry))))))
      (match (get recovered-compressed-public-key entry) 
-        recovered-public-key (if (is-eq recovered-public-key compressed-public-key)
-          { value: (unwrap-panic (as-max-len? (append (get value acc) recovered-public-key) u20)), active-guardians: (get active-guardians acc) }
+        recovered-public-key (if (and 
+            (is-eq recovered-public-key compressed-public-key)
+            (is-none (index-of? (get value acc) recovered-public-key)))
+          { 
+            value: (unwrap-panic (as-max-len? (append (get value acc) recovered-public-key) u20)), 
+            active-guardians: (get active-guardians acc)
+          }
           acc)
         err acc)))
 
