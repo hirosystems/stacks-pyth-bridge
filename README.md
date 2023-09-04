@@ -85,7 +85,7 @@ enable_rbf = true
 enable_microblocks = true
 
 [event_observer]
-ingestion_port = 10000
+ingestion_port = 20456
 ```
 
 After reviewing the generated config, the service can be tested using the command:
