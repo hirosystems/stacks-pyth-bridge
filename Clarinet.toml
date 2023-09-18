@@ -11,6 +11,11 @@ path = 'contracts/pyth-oracle-dev-preview-1.clar'
 clarity_version = 2
 epoch = 2.4
 
+[contracts.pyth-oracle-v1]
+path = 'contracts/pyth-oracle-v1.clar'
+clarity_version = 2
+epoch = 2.4
+
 [contracts.wormhole-core-dev-preview-1]
 path = 'contracts/deps/wormhole-core-dev-preview-1.clar'
 clarity_version = 2
