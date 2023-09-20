@@ -19,6 +19,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["unit-tests"],
-  "exclude": ["node_modules"]
+  "include": ["node_modules/@hirosystems/clarinet-sdk/vitest-helpers/src", "unit-tests"]
 }
