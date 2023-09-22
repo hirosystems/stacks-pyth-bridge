@@ -36,6 +36,11 @@ path = 'contracts/deps/hk-cursor-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
+[contracts.hk-cursor-v2]
+path = 'contracts/deps/hk-cursor-v2.clar'
+clarity_version = 2
+epoch = 2.4
+
 [repl.analysis]
 passes = ['check_checker']
 
