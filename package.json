@@ -7,15 +7,16 @@
     "test": "unit-tests"
   },
   "scripts": {
-    "test": "vitest run -c ./node_modules/obscurity-sdk/vitest.config.js",
-    "test:coverage": "vitest run -c ./node_modules/obscurity-sdk/vitest.config.js -- --clarity-coverage true"
+    "test": "vitest run",
+    "test:coverage": "vitest run -- --clarity-coverage true"
   },
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@hirosystems/clarinet-sdk": "^0.1.2",
     "@stacks/transactions": "^6.5.4",
-    "obscurity-sdk": "^0.4.0-rc6",
-    "vitest": "^0.34.1"
+    "vitest": "^0.34.1",
+    "vitest-environment-clarinet": "^0.1.1"
   }
 }
