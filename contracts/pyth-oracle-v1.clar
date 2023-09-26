@@ -51,7 +51,7 @@
   })
 
 (define-data-var watched-price-feeds 
-  (list 1024 (buff 32)) 
+  (list 1024 (buff 32))
   (list STX_USD BTC_USD ETH_USD))
 
 ;;;; Public functions
@@ -62,10 +62,12 @@
         (cursor-pnau-vaa (try! (contract-call? .hk-cursor-v2 read-buff-max-len-2048 (get next cursor-pnau-vaa-size) (get value cursor-pnau-vaa-size))))
         (vaa (try! (contract-call? .wormhole-core-dev-preview-1 parse-and-verify-vaa (get value cursor-pnau-vaa))))
         (cursor-merkle-root-data (try! (parse-merkle-root-data-from-vaa-payload (get payload vaa))))
-        (decoded-prices-updates (parse-and-verify-prices-updates (get value cursor-pnau-vaa) (get merkle-root-hash (get value cursor-merkle-root-data)))))
+        (decoded-prices-updates (parse-and-verify-prices-updates 
+          (contract-call? .hk-cursor-v2 slice (get next cursor-pnau-vaa) none)
+          (get merkle-root-hash (get value cursor-merkle-root-data)))))
         ;; (watched-prices-feeds (var-get watched-price-feeds))
         ;; (updated-prices-feeds (get updated-prices-feeds (fold process-prices-attestations-batch decoded-prices-attestations-batches { input: watched-prices-feeds, updated-prices-feeds: (list) }))))
-    (ok decoded-prices-updates)))
+    (ok { root-hash: (get value cursor-merkle-root-data), updates: decoded-prices-updates })))
 
 ;;;; Read only functions
 ;;
@@ -125,9 +127,9 @@
       next: (get next cursor-proof-type)
     })))
 
-(define-read-only (parse-and-verify-prices-updates (bytes (buff 8192)) (merkle-root-hash (buff 32)))
+(define-read-only (parse-and-verify-prices-updates (bytes (buff 8192)) (merkle-root-hash (buff 20)))
   (let ((cursor-num-updates (try! (contract-call? .hk-cursor-v2 read-u8 { bytes: bytes, pos: u0 })))
-        (cursor-updates-bytes (contract-call? .hk-cursor-v2 slice (get next cursor-num-updates)))
+        (cursor-updates-bytes (contract-call? .hk-cursor-v2 slice (get next cursor-num-updates) none))
         (updates (get result (fold parse-price-info-and-proof cursor-updates-bytes { 
           result: (list), 
           cursor: {
@@ -136,8 +138,43 @@
           },
           bytes: cursor-updates-bytes,
           limit: (get value cursor-num-updates) 
+        })))
+        (merkle-proof-checks-success (get result (fold check-merkle-proof updates {
+          result: true,
+          merkle-root-hash: merkle-root-hash
         }))))
+    (asserts! merkle-proof-checks-success (err u1000))
     (ok updates)))
+
+;; (print (keccak256 buff))
+
+(define-private (check-merkle-proof
+      (entry 
+        {
+          price-identifier: (buff 32),
+          price: int,
+          conf: uint,
+          expo: int,
+          publish-time: uint,
+          prev-publish-time: uint,
+          ema-price: int,
+          ema-conf: uint,
+          proof: (list 128 (buff 20)),
+          leaf-bytes: (buff 255)
+        })
+      (acc 
+        { 
+          merkle-root-hash: (buff 20),
+          result: bool, 
+        }))
+    { 
+      merkle-root-hash: (get merkle-root-hash acc),
+      result: (and (get result acc)
+        (contract-call? .hk-merkle-tree-keccak160-v1 check-proof 
+          (get merkle-root-hash acc) 
+          (get leaf-bytes entry) 
+          (get proof entry)))
+    })
 
 (define-private (parse-price-info-and-proof
       (entry (buff 1))
@@ -147,7 +184,7 @@
           next-update-index: uint
         },
         bytes: (buff 8192),
-        result: (list 160 {
+        result: (list 64 {
           price-identifier: (buff 32),
           price: int,
           conf: uint,
@@ -156,7 +193,8 @@
           prev-publish-time: uint,
           ema-price: int,
           ema-conf: uint,
-          proof: (list 255 (buff 20)),
+          proof: (list 128 (buff 20)),
+          leaf-bytes: (buff 255)
         }), 
         limit: uint
       }))
@@ -165,7 +203,7 @@
     (if (is-eq (get index (get cursor acc)) (get next-update-index (get cursor acc)))
       ;; Parse update
       (let ((cursor-update (contract-call? .hk-cursor-v2 new (get bytes acc) (some (get index (get cursor acc)))))
-            (cursor-message-size (unwrap-panic (contract-call? .hk-cursor-v2 read-u16 (get next cursor-update)))) ;; Question: not used?
+            (cursor-message-size (unwrap-panic (contract-call? .hk-cursor-v2 read-u16 (get next cursor-update))))
             (cursor-message-type (unwrap-panic (contract-call? .hk-cursor-v2 read-u8 (get next cursor-message-size))))
             (cursor-price-identifier (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-32 (get next cursor-message-type))))
             (cursor-price (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-price-identifier))))
@@ -176,8 +214,9 @@
             (cursor-ema-price (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-prev-publish-time))))
             (cursor-ema-conf (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-ema-price))))
             (cursor-proof (contract-call? .hk-cursor-v2 advance (get next cursor-message-size) (get value cursor-message-size)))
-            (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 cursor-proof)))
-            (proof-bytes (contract-call? .hk-cursor-v2 slice (get next cursor-proof-size)))
+            (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v2 read-u8 cursor-proof)))
+            (proof-bytes (contract-call? .hk-cursor-v2 slice (get next cursor-proof-size) none))
+            (leaf-bytes (contract-call? .hk-cursor-v2 slice (get next cursor-message-size) (some (get value cursor-message-size))))
             (proof (get result (fold parse-proof proof-bytes { 
               result: (list),
               cursor: {
@@ -185,7 +224,7 @@
                 next-update-index: u0
               },
               bytes: proof-bytes,
-              limit: (buff-to-uint-be (get value cursor-proof-size)) 
+              limit: (get value cursor-proof-size)
             }))))
         ;; Perform assertions
         ;; TODO
@@ -195,7 +234,7 @@
         {
           cursor: { 
             index: (+ (get index (get cursor acc)) u1),
-            next-update-index: (+ (get index (get cursor acc)) (+ (get pos (get next cursor-proof-size)) (buff-to-uint-be (get value cursor-proof-size)))),
+            next-update-index: (+ (get index (get cursor acc)) (+ (get pos (get next cursor-proof-size)) (get value cursor-proof-size))),
           },
           bytes: (get bytes acc),
           result: (unwrap-panic (as-max-len? (append (get result acc) {
@@ -207,8 +246,9 @@
             prev-publish-time: (buff-to-uint-be (get value cursor-prev-publish-time)),
             ema-price: (buff-to-int-be (get value cursor-ema-price)),
             ema-conf: (buff-to-uint-be (get value cursor-ema-conf)),
-            proof: proof
-          }) u160)),
+            proof: proof,
+            leaf-bytes: (unwrap-panic (as-max-len? leaf-bytes u255))
+          }) u64)),
           limit: (get limit acc),
       })
       ;; Increment position
@@ -230,7 +270,7 @@
           next-update-index: uint
         },
         bytes: (buff 8192),
-        result: (list 255 (buff 20)), 
+        result: (list 128 (buff 20)), 
         limit: uint
       }))
   (if (is-eq (len (get result acc)) (get limit acc))
@@ -239,16 +279,16 @@
       ;; Parse update
       (let ((cursor-hash (contract-call? .hk-cursor-v2 new (get bytes acc) (some (get index (get cursor acc)))))
             (hash (get value (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-20 (get next cursor-hash))))))
-          ;; Perform assertions
+        ;; Perform assertions
         {
           cursor: { 
             index: (+ (get index (get cursor acc)) u1),
-            next-update-index: (+ (get index (get cursor acc)) (+ (get pos (get next cursor-hash)) u20)),
+            next-update-index: (+ (get index (get cursor acc)) u20),
           },
           bytes: (get bytes acc),
-          result: (unwrap-panic (as-max-len? (append (get result acc) hash) u255)),
+          result: (unwrap-panic (as-max-len? (append (get result acc) hash) u128)),
           limit: (get limit acc),
-      })
+        })
       ;; Increment position
       {
           cursor: { 
@@ -259,80 +299,3 @@
           result: (get result acc),
           limit: (get limit acc)
       })))
-
-(define-private (process-prices-attestations-batch 
-      (entry (response 
-        { 
-          attestation-size: uint, 
-          attestations-count: uint, 
-          price-attestations: (list 254 {
-            price-feed-id: (buff 32),
-            price: int,
-            conf: uint,
-            expo: int,
-            ema-price: int,
-            ema-conf: uint,
-            status: uint,
-            attestation-time: uint,
-            publish-time: uint,
-            prev-publish-time: uint,
-            prev-price: int,
-            prev-conf: uint,
-          })
-        } 
-        uint)) 
-      (acc { 
-        input: (list 2048 (buff 32)), 
-        updated-prices-feeds: (list 2048 (buff 32)) 
-      }))
-  (let ((batch (unwrap-panic entry))
-        (updated-prices-feeds (get updated-prices-feeds (fold process-price-attestation (get price-attestations batch) acc))))
-    {
-      input: (get input acc),
-      updated-prices-feeds: updated-prices-feeds
-    }))
-
-(define-private (process-price-attestation 
-      (entry {
-        price-feed-id: (buff 32),
-        price: int,
-        conf: uint,
-        expo: int,
-        ema-price: int,
-        ema-conf: uint,
-        status: uint,
-        attestation-time: uint,
-        publish-time: uint,
-        prev-publish-time: uint,
-        prev-price: int,
-        prev-conf: uint,
-        }) 
-      (acc { input: (list 2048 (buff 32)), updated-prices-feeds: (list 2048 (buff 32)) }))
-  (match (index-of? (get input acc) (get price-feed-id entry)) 
-    index (begin 
-      ;; Update Price Feed
-      (map-set prices 
-        { 
-          price-feed-id: (get price-feed-id entry), 
-        }
-        {
-          price: (get price entry), 
-          conf: (get conf entry), 
-          expo: (get expo entry), 
-          ema-price: (get ema-price entry), 
-          ema-conf: (get ema-conf entry), 
-          status: (get status entry), 
-          attestation-time: (get attestation-time entry), 
-          publish-time: (get publish-time entry), 
-          prev-publish-time: (get prev-publish-time entry), 
-          prev-price: (get prev-price entry), 
-          prev-conf: (get prev-conf entry), 
-        })
-      ;; TODO: check timestamps
-      ;; Emit event
-      (print { type: "price-feed", action: "updated", data: entry })
-      {
-        input: (get input acc),
-        updated-prices-feeds: (unwrap-panic (as-max-len? (append (get updated-prices-feeds acc) (get price-feed-id entry)) u2048))
-      })
-    acc))

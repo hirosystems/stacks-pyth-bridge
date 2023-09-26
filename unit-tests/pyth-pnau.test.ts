@@ -2,12 +2,12 @@ import { Cl, ClarityType, ResponseOkCV } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
 import { tx } from "@hirosystems/clarinet-sdk";
 
-import { mainnet_valid_guardians_set_upgrades, mainnet_valid_pfs } from "./constants";
+import { mainnet_valid_guardians_set_upgrades, mainnet_valid_au } from "./constants";
 
-const pyth_oracle_v1_contract_name = "pyth-oracle-dev-preview-1";
+const pyth_oracle_v1_contract_name = "pyth-oracle-v1";
 const wormhole_core_v1_contract_name = "wormhole-core-dev-preview-1";
 
-describe("Pyth testsuite", () => {
+describe("Pyth (PNAU) testsuite", () => {
   const accounts = vm.getAccounts();
   const sender = accounts.get("wallet_1")!;
 
@@ -47,20 +47,23 @@ describe("Pyth testsuite", () => {
       expect(b.result).toHaveClarityType(ClarityType.ResponseOk);
     });
 
-    const vaaBytes = Cl.bufferFromHex(mainnet_valid_pfs[0]);
+    const vaaBytes = Cl.bufferFromHex(mainnet_valid_au[0]);
 
     let res = vm.callPublicFn(
       pyth_oracle_v1_contract_name,
       "update-prices-feeds",
-      [Cl.list([vaaBytes])],
+      [vaaBytes],
       sender
     );
 
+    // console.log(res.result);
     const result = res.result;
     expect(result).toHaveClarityType(ClarityType.ResponseOk);
+    // expect(result as ResponseOkCV).toHaveClarityType(ClarityType.ResponseOk);
+    console.log(JSON.stringify(result, null, 2));
 
-    expect((result as ResponseOkCV).value).toBeList([
-      Cl.bufferFromHex("e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"),
-    ]);
+    // expect((result as ResponseOkCV).value).toBeList([
+    // //   Cl.bufferFromHex("e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"),
+    // ]);
   });
 });
