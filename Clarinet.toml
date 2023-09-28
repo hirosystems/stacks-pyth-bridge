@@ -11,6 +11,11 @@ path = 'contracts/pyth-oracle-dev-preview-1.clar'
 clarity_version = 2
 epoch = 2.4
 
+[contracts.pyth-oracle-v1]
+path = 'contracts/pyth-oracle-v1.clar'
+clarity_version = 2
+epoch = 2.4
+
 [contracts.wormhole-core-dev-preview-1]
 path = 'contracts/deps/wormhole-core-dev-preview-1.clar'
 clarity_version = 2
@@ -30,6 +35,17 @@ epoch = 2.4
 path = 'contracts/deps/hk-cursor-v1.clar'
 clarity_version = 2
 epoch = 2.4
+
+[contracts.hk-cursor-v2]
+path = 'contracts/deps/hk-cursor-v2.clar'
+clarity_version = 2
+epoch = 2.4
+
+[contracts.hk-merkle-tree-keccak160-v1]
+path = 'contracts/deps/hk-merkle-tree-keccak160-v1.clar'
+clarity_version = 2
+epoch = 2.4
+
 
 [repl.analysis]
 passes = ['check_checker']

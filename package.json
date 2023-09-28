@@ -8,15 +8,15 @@
   },
   "scripts": {
     "test": "vitest run",
-    "test:coverage": "vitest run -- --clarity-coverage true"
+    "test:coverage": "vitest run -- --coverage true"
   },
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@hirosystems/clarinet-sdk": "^0.1.2",
-    "@stacks/transactions": "^6.5.4",
+    "@hirosystems/clarinet-sdk": "^0.5.5",
+    "@stacks/transactions": "^6.9.0",
     "vitest": "^0.34.1",
-    "vitest-environment-clarinet": "^0.1.1"
+    "vitest-environment-clarinet": "^0.1.3"
   }
 }
