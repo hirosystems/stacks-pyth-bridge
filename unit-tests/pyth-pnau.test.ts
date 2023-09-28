@@ -60,7 +60,7 @@ describe("Pyth (PNAU) testsuite", () => {
     const result = res.result;
     expect(result).toHaveClarityType(ClarityType.ResponseOk);
     // expect(result as ResponseOkCV).toHaveClarityType(ClarityType.ResponseOk);
-    console.log(JSON.stringify(result, null, 2));
+    console.log(Cl.prettyPrint(result, 2));
 
     // expect((result as ResponseOkCV).value).toBeList([
     // //   Cl.bufferFromHex("e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"),
