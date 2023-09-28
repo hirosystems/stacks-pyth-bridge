@@ -14,21 +14,23 @@
 
 (define-constant PNAU_MAGIC 0x504e4155) ;; 'PNAU': Pyth Network Accumulator Update
 (define-constant AUWV_MAGIC 0x41555756) ;; 'AUWV': Accumulator Update Wormhole Verficiation
-(define-constant PYTHNET_MAJOR_VERSION u0)
+(define-constant PYTHNET_MAJOR_VERSION u1)
 (define-constant PYTHNET_MINOR_VERSION u0)
 
 ;; Generic error
 (define-constant ERR_PANIC (err u0))
 ;; Unable to price feed magic bytes
-(define-constant ERR_PARSING_MAGIC_BYTES (err u2001))
+(define-constant ERR_MAGIC_BYTES (err u2001))
 ;; Unable to parse major version
-(define-constant ERR_PARSING_VERSION_MAJ (err u2002))
+(define-constant ERR_VERSION_MAJ (err u2002))
 ;; Unable to parse minor version
-(define-constant ERR_PARSING_VERSION_MIN (err u2003))
+(define-constant ERR_VERSION_MIN (err u2003))
 ;; Unable to parse trailing header size
-(define-constant ERR_PARSING_HEADER_TRAILING_SIZE (err u2004))
+(define-constant ERR_HEADER_TRAILING_SIZE (err u2004))
 ;; Unable to parse update type
-(define-constant ERR_PARSING_PROOF_TYPE (err u2005))
+(define-constant ERR_PROOF_TYPE (err u2005))
+;; Merkle root mismatch
+(define-constant MERKLE_ROOT_MISMATCH (err u2006))
 ;; Price not found
 (define-constant ERR_NOT_FOUND (err u0))
 
@@ -79,7 +81,7 @@
 ;;;; Private functions
 ;;
 (define-private (parse-merkle-root-data-from-vaa-payload (payload-vaa-bytes (buff 2048)))
-  (let ((cursor-payload-type (unwrap! (contract-call? .hk-cursor-v2 read-u32 { bytes: payload-vaa-bytes, pos: u0 }) 
+  (let ((cursor-payload-type (unwrap! (contract-call? .hk-cursor-v2 read-buff-4 { bytes: payload-vaa-bytes, pos: u0 }) 
           (err u0)))
         (cursor-wh-update-type (unwrap! (contract-call? .hk-cursor-v2 read-u8 (get next cursor-payload-type)) 
           (err u0)))
@@ -89,6 +91,10 @@
           (err u0)))
         (cursor-merkle-root-hash (unwrap! (contract-call? .hk-cursor-v2 read-buff-20 (get next cursor-merkle-root-ring-size)) 
           (err u0))))
+    ;; Check payload type
+    (asserts! (is-eq (get value cursor-payload-type) AUWV_MAGIC) ERR_MAGIC_BYTES)
+    ;; Check update type
+    (asserts! (is-eq (get value cursor-wh-update-type) u0) (err u999))
     (ok {
       value: {
         merkle-root-slot: (get value cursor-merkle-root-slot),
@@ -101,21 +107,25 @@
 
 (define-read-only (parse-pnau-header (pf-bytes (buff 8192)))
   (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v2 read-buff-4 { bytes: pf-bytes, pos: u0 }) 
-          ERR_PARSING_MAGIC_BYTES))
-        ;; Todo: check magic bytes
+          ERR_MAGIC_BYTES))
         (cursor-version-maj (unwrap! (contract-call? .hk-cursor-v2 read-u8 (get next cursor-magic)) 
-          ERR_PARSING_VERSION_MAJ))
-        ;; Todo: check major version
+          ERR_VERSION_MAJ))
         (cursor-version-min (unwrap! (contract-call? .hk-cursor-v2 read-u8 (get next cursor-version-maj)) 
-          ERR_PARSING_VERSION_MIN))
-        ;; Todo: check minor version
+          ERR_VERSION_MIN))
         (cursor-header-trailing-size (unwrap! (contract-call? .hk-cursor-v2 read-u8 (get next cursor-version-min)) 
-          ERR_PARSING_HEADER_TRAILING_SIZE))
-        ;; Question: proof_type (move) vs updateType (solidity)
+          ERR_HEADER_TRAILING_SIZE))
         (cursor-proof-type (unwrap! (contract-call? .hk-cursor-v2 read-u8 {
             bytes: pf-bytes,
             pos: (+ (get pos (get next cursor-header-trailing-size)) (get value cursor-header-trailing-size))})
-          ERR_PARSING_PROOF_TYPE)))
+          ERR_PROOF_TYPE)))
+    ;; Check magic bytes
+    (asserts! (is-eq (get value cursor-magic) PNAU_MAGIC) ERR_MAGIC_BYTES)
+    ;; Check major version
+    (asserts! (is-eq (get value cursor-version-maj) PYTHNET_MAJOR_VERSION) ERR_VERSION_MAJ)
+    ;; Check minor version
+    (asserts! (is-eq (get value cursor-version-min) PYTHNET_MINOR_VERSION) ERR_VERSION_MIN)
+    ;; Check proof type
+    (asserts! (is-eq (get value cursor-proof-type) u0) ERR_PROOF_TYPE)
     (ok {
       value: {
         magic: (get value cursor-magic),
@@ -143,10 +153,8 @@
           result: true,
           merkle-root-hash: merkle-root-hash
         }))))
-    (asserts! merkle-proof-checks-success (err u1000))
+    (asserts! merkle-proof-checks-success MERKLE_ROOT_MISMATCH)
     (ok updates)))
-
-;; (print (keccak256 buff))
 
 (define-private (check-merkle-proof
       (entry 
@@ -179,7 +187,7 @@
 (define-private (parse-price-info-and-proof
       (entry (buff 1))
       (acc { 
-        cursor: { 
+        cursor: {
           index: uint,
           next-update-index: uint
         },
@@ -195,7 +203,7 @@
           ema-conf: uint,
           proof: (list 128 (buff 20)),
           leaf-bytes: (buff 255)
-        }), 
+        }),
         limit: uint
       }))
   (if (is-eq (len (get result acc)) (get limit acc))
@@ -226,11 +234,6 @@
               bytes: proof-bytes,
               limit: (get value cursor-proof-size)
             }))))
-        ;; Perform assertions
-        ;; TODO
-        ;; (tuple (bytes (buff 8192)) (cursor (tuple (index uint) (next-update-index uint))) (limit uint) (result (list 255 (buff 20))))
-        ;; (tuple (bytes (buff 8192)) (cursor (tuple (index uint) (next-update-index uint))) (limit (buff 8)) (result (list 0 UnknownType)))
-        ;; Increment position, next update index and augment result
         {
           cursor: { 
             index: (+ (get index (get cursor acc)) u1),
