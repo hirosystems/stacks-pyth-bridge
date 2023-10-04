@@ -1,7 +1,7 @@
 (define-trait wormhole-core-trait
   (
     ;; Parse and Verify cryptographic validity of a VAA
-    (parse-and-verify-vaa ((buff 2048)) (response {
+    (parse-and-verify-vaa ((buff 8192)) (response {
         version: uint, 
         guardian-set-id: uint,
         signatures-len: uint ,

@@ -103,7 +103,7 @@
 ;; []byte      payload             (VAA message content)
 ;;
 ;; @param vaa-bytes: 
-(define-read-only (parse-vaa (vaa-bytes (buff 2048)))
+(define-read-only (parse-vaa (vaa-bytes (buff 8192)))
   (let ((cursor-version (unwrap! (contract-call? .hk-cursor-v1 read-u8 { bytes: vaa-bytes, pos: u0 }) 
           ERR_VAA_PARSING_VERSION))
         (cursor-guardian-set-id (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-version)) 
@@ -158,7 +158,7 @@
 
 ;; @desc Parse and check the validity of a Verified Action Approval (VAA)
 ;; @param vaa-bytes: 
-(define-read-only (parse-and-verify-vaa (vaa-bytes (buff 2048)))
+(define-read-only (parse-and-verify-vaa (vaa-bytes (buff 8192)))
   (let ((vaa (try! (parse-vaa vaa-bytes)))
         (active-guardians (unwrap! (map-get? guardian-sets { set-id: (get guardian-set-id vaa) }) ERR_VAA_CHECKS_GUARDIAN_SET_CONSISTENCY))
         (signatures-from-active-guardians (fold batch-check-active-public-keys (get guardians-public-keys vaa)
@@ -272,7 +272,7 @@
 ;; @desc Foldable function parsing a sequence of bytes into a list of { guardian-id: u8, signature: (buff 65) } 
 (define-private (batch-read-signatures 
       (entry uint) 
-      (acc { next: { bytes: (buff 4096), pos: uint }, iter: uint, value: (list 19 { guardian-id: uint, signature: (buff 65) })}))
+      (acc { next: { bytes: (buff 8192), pos: uint }, iter: uint, value: (list 19 { guardian-id: uint, signature: (buff 65) })}))
   (if (is-eq (get iter acc) u0)
     { iter: u0, next: (get next acc), value: (get value acc) }
     (let ((cursor-guardian-id (unwrap-panic (contract-call? .hk-cursor-v1 read-u8 (get next acc))))

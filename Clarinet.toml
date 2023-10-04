@@ -6,8 +6,8 @@ telemetry = false
 cache_dir = './.cache'
 requirements = []
 
-[contracts.pyth-oracle-dev-preview-1]
-path = 'contracts/pyth-oracle-dev-preview-1.clar'
+[contracts.pyth-proxy-v1]
+path = 'contracts/pyth-proxy-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
@@ -16,33 +16,28 @@ path = 'contracts/pyth-oracle-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
-[contracts.wormhole-core-dev-preview-1]
-path = 'contracts/deps/wormhole-core-dev-preview-1.clar'
-clarity_version = 2
-epoch = 2.4
-
 [contracts.pyth-oracle-trait]
 path = 'contracts/pyth-oracle-trait.clar'
 clarity_version = 2
 epoch = 2.4
 
+[contracts.wormhole-core-v1]
+path = 'contracts/wormhole/wormhole-core-v1.clar'
+clarity_version = 2
+epoch = 2.4
+
 [contracts.wormhole-core-trait]
-path = 'contracts/deps/wormhole-core-trait.clar'
+path = 'contracts/wormhole/wormhole-core-trait.clar'
 clarity_version = 2
 epoch = 2.4
 
 [contracts.hk-cursor-v1]
-path = 'contracts/deps/hk-cursor-v1.clar'
-clarity_version = 2
-epoch = 2.4
-
-[contracts.hk-cursor-v2]
-path = 'contracts/deps/hk-cursor-v2.clar'
+path = 'contracts/hiro-kit/hk-cursor-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
 [contracts.hk-merkle-tree-keccak160-v1]
-path = 'contracts/deps/hk-merkle-tree-keccak160-v1.clar'
+path = 'contracts/hiro-kit/hk-merkle-tree-keccak160-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
