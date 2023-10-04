@@ -1,18 +1,26 @@
+(use-trait wormhole-core-trait .wormhole-core-trait.wormhole-core-trait)
+
 (define-trait pyth-oracle-trait
   (
-    (update-prices-feeds ((list 4 (buff 2048))) (response (list 4 {
-      price-feed-id: (buff 32),
-      price: (buff 8),
-      conf: (buff 8),
-      expo: (buff 4),
-      ema-price: (buff 8),
-      ema-conf: (buff 8),
-      status: (buff 1),
-      attestation-time: (buff 8),
-      publish-time: (buff 8),
-      prev-publish-time: (buff 8),
-      prev-price: (buff 8),
-      prev-conf: (buff 8),
+    (read-price-feed ((buff 32)) (response {
+      price: int,
+      conf: uint,
+      expo: int,
+      ema-price: int,
+      ema-conf: uint,
+      publish-time: uint,
+      prev-publish-time: uint,
+    } uint))
+
+    (verify-and-update-price-feeds ((buff 8192) <wormhole-core-trait>) (response (list 64 {
+      price-identifier: (buff 32),
+      price: int,
+      conf: uint,
+      expo: int,
+      ema-price: int,
+      ema-conf: uint,
+      publish-time: uint,
+      prev-publish-time: uint,
     }) uint))
   )
 )

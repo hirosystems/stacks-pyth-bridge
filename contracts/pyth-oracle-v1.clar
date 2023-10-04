@@ -4,6 +4,8 @@
 ;; Report an issue: https://github.com/hirosystems/stacks-pyth-bridge/issues
 
 ;;;; Traits
+(impl-trait .pyth-oracle-trait.pyth-oracle-trait)
+(use-trait wormhole-core-trait .wormhole-core-trait.wormhole-core-trait)
 
 ;;;; Constants
 
@@ -42,14 +44,10 @@
     price: int,
     conf: uint,
     expo: int,
-    attestation-time: uint,
     ema-price: int,
     ema-conf: uint,
-    status: uint,
     publish-time: uint,
     prev-publish-time: uint,
-    prev-price: int,
-    prev-conf: uint,
   })
 
 (define-data-var watched-price-feeds 
@@ -57,39 +55,49 @@
   (list STX_USD BTC_USD ETH_USD))
 
 ;;;; Public functions
-;;
-(define-public (update-prices-feeds (pnau-bytes (buff 8192)))
-  (let ((cursor-pnau-header (try! (parse-pnau-header pnau-bytes)))
-        (cursor-pnau-vaa-size (try! (contract-call? .hk-cursor-v2 read-u16 (get next cursor-pnau-header))))
-        (cursor-pnau-vaa (try! (contract-call? .hk-cursor-v2 read-buff-max-len-2048 (get next cursor-pnau-vaa-size) (get value cursor-pnau-vaa-size))))
-        (vaa (try! (contract-call? .wormhole-core-dev-preview-1 parse-and-verify-vaa (get value cursor-pnau-vaa))))
-        (cursor-merkle-root-data (try! (parse-merkle-root-data-from-vaa-payload (get payload vaa))))
-        (decoded-prices-updates (parse-and-verify-prices-updates 
-          (contract-call? .hk-cursor-v2 slice (get next cursor-pnau-vaa) none)
-          (get merkle-root-hash (get value cursor-merkle-root-data)))))
-        ;; (watched-prices-feeds (var-get watched-price-feeds))
-        ;; (updated-prices-feeds (get updated-prices-feeds (fold process-prices-attestations-batch decoded-prices-attestations-batches { input: watched-prices-feeds, updated-prices-feeds: (list) }))))
-    (ok { root-hash: (get value cursor-merkle-root-data), updates: decoded-prices-updates })))
+(define-public (verify-and-update-price-feeds (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
+  (begin
+    ;; Ensure that updates are always coming from the proxy contract 
+    (asserts! (is-eq contract-caller .pyth-proxy-v1) (err u1))
+    ;; Proceed to update
+    (let ((prices-updates (try! (decode-pnau-price-update pnau-bytes wormhole-core-address))))
+          ;; (watched-prices-feeds (var-get watched-price-feeds))
+          ;; (updated-prices-feeds (get updated-prices-feeds (fold process-prices-attestations-batch decoded-prices-attestations-batches { input: watched-prices-feeds, updated-prices-feeds: (list) }))))
+      (ok prices-updates))))
 
 ;;;; Read only functions
 ;;
-
 (define-read-only (read-price-feed (price-feed-id (buff 32)))
   (let ((price-feed-entry (unwrap! (map-get? prices { price-feed-id: price-feed-id }) ERR_NOT_FOUND)))
     (ok price-feed-entry)))
 
 ;;;; Private functions
-;;
+;; Note: wormhole-core-address is checked upstream so we will ignore the following warning
+;; #[filter(pnau-bytes, wormhole-core-address)]
+(define-public (decode-pnau-price-update (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
+    (let ((cursor-pnau-header (try! (parse-pnau-header pnau-bytes)))
+          (cursor-pnau-vaa-size (try! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-pnau-header))))
+          (cursor-pnau-vaa (try! (contract-call? .hk-cursor-v1 read-buff-max-len-2048 (get next cursor-pnau-vaa-size) (get value cursor-pnau-vaa-size))))
+          (vaa (try! (contract-call? wormhole-core-address parse-and-verify-vaa (get value cursor-pnau-vaa))))
+          (cursor-merkle-root-data (try! (parse-merkle-root-data-from-vaa-payload (get payload vaa))))
+          (decoded-prices-updates (try! (parse-and-verify-prices-updates 
+            (contract-call? .hk-cursor-v1 slice (get next cursor-pnau-vaa) none)
+            (get merkle-root-hash (get value cursor-merkle-root-data)))))
+          (prices-updates (map cast-decoded-price decoded-prices-updates)))
+          ;; (watched-prices-feeds (var-get watched-price-feeds))
+          ;; (updated-prices-feeds (get updated-prices-feeds (fold process-prices-attestations-batch decoded-prices-attestations-batches { input: watched-prices-feeds, updated-prices-feeds: (list) }))))
+      (ok prices-updates)))
+
 (define-private (parse-merkle-root-data-from-vaa-payload (payload-vaa-bytes (buff 2048)))
-  (let ((cursor-payload-type (unwrap! (contract-call? .hk-cursor-v2 read-buff-4 { bytes: payload-vaa-bytes, pos: u0 }) 
+  (let ((cursor-payload-type (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: payload-vaa-bytes, pos: u0 }) 
           (err u0)))
-        (cursor-wh-update-type (unwrap! (contract-call? .hk-cursor-v2 read-u8 (get next cursor-payload-type)) 
+        (cursor-wh-update-type (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-payload-type)) 
           (err u0)))
-        (cursor-merkle-root-slot (unwrap! (contract-call? .hk-cursor-v2 read-u64 (get next cursor-wh-update-type)) 
+        (cursor-merkle-root-slot (unwrap! (contract-call? .hk-cursor-v1 read-u64 (get next cursor-wh-update-type)) 
           (err u0)))
-        (cursor-merkle-root-ring-size (unwrap! (contract-call? .hk-cursor-v2 read-u32 (get next cursor-merkle-root-slot)) 
+        (cursor-merkle-root-ring-size (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-merkle-root-slot)) 
           (err u0)))
-        (cursor-merkle-root-hash (unwrap! (contract-call? .hk-cursor-v2 read-buff-20 (get next cursor-merkle-root-ring-size)) 
+        (cursor-merkle-root-hash (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-merkle-root-ring-size)) 
           (err u0))))
     ;; Check payload type
     (asserts! (is-eq (get value cursor-payload-type) AUWV_MAGIC) ERR_MAGIC_BYTES)
@@ -106,15 +114,15 @@
     })))
 
 (define-read-only (parse-pnau-header (pf-bytes (buff 8192)))
-  (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v2 read-buff-4 { bytes: pf-bytes, pos: u0 }) 
+  (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: pf-bytes, pos: u0 }) 
           ERR_MAGIC_BYTES))
-        (cursor-version-maj (unwrap! (contract-call? .hk-cursor-v2 read-u8 (get next cursor-magic)) 
+        (cursor-version-maj (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-magic)) 
           ERR_VERSION_MAJ))
-        (cursor-version-min (unwrap! (contract-call? .hk-cursor-v2 read-u8 (get next cursor-version-maj)) 
+        (cursor-version-min (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-version-maj)) 
           ERR_VERSION_MIN))
-        (cursor-header-trailing-size (unwrap! (contract-call? .hk-cursor-v2 read-u8 (get next cursor-version-min)) 
+        (cursor-header-trailing-size (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-version-min)) 
           ERR_HEADER_TRAILING_SIZE))
-        (cursor-proof-type (unwrap! (contract-call? .hk-cursor-v2 read-u8 {
+        (cursor-proof-type (unwrap! (contract-call? .hk-cursor-v1 read-u8 {
             bytes: pf-bytes,
             pos: (+ (get pos (get next cursor-header-trailing-size)) (get value cursor-header-trailing-size))})
           ERR_PROOF_TYPE)))
@@ -138,8 +146,8 @@
     })))
 
 (define-read-only (parse-and-verify-prices-updates (bytes (buff 8192)) (merkle-root-hash (buff 20)))
-  (let ((cursor-num-updates (try! (contract-call? .hk-cursor-v2 read-u8 { bytes: bytes, pos: u0 })))
-        (cursor-updates-bytes (contract-call? .hk-cursor-v2 slice (get next cursor-num-updates) none))
+  (let ((cursor-num-updates (try! (contract-call? .hk-cursor-v1 read-u8 { bytes: bytes, pos: u0 })))
+        (cursor-updates-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-num-updates) none))
         (updates (get result (fold parse-price-info-and-proof cursor-updates-bytes { 
           result: (list), 
           cursor: {
@@ -210,21 +218,21 @@
     acc
     (if (is-eq (get index (get cursor acc)) (get next-update-index (get cursor acc)))
       ;; Parse update
-      (let ((cursor-update (contract-call? .hk-cursor-v2 new (get bytes acc) (some (get index (get cursor acc)))))
-            (cursor-message-size (unwrap-panic (contract-call? .hk-cursor-v2 read-u16 (get next cursor-update))))
-            (cursor-message-type (unwrap-panic (contract-call? .hk-cursor-v2 read-u8 (get next cursor-message-size))))
-            (cursor-price-identifier (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-32 (get next cursor-message-type))))
-            (cursor-price (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-price-identifier))))
-            (cursor-conf (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-price))))
-            (cursor-expo (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-4 (get next cursor-conf))))
-            (cursor-publish-time (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-expo))))
-            (cursor-prev-publish-time (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-publish-time))))
-            (cursor-ema-price (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-prev-publish-time))))
-            (cursor-ema-conf (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-8 (get next cursor-ema-price))))
-            (cursor-proof (contract-call? .hk-cursor-v2 advance (get next cursor-message-size) (get value cursor-message-size)))
-            (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v2 read-u8 cursor-proof)))
-            (proof-bytes (contract-call? .hk-cursor-v2 slice (get next cursor-proof-size) none))
-            (leaf-bytes (contract-call? .hk-cursor-v2 slice (get next cursor-message-size) (some (get value cursor-message-size))))
+      (let ((cursor-update (contract-call? .hk-cursor-v1 new (get bytes acc) (some (get index (get cursor acc)))))
+            (cursor-message-size (unwrap-panic (contract-call? .hk-cursor-v1 read-u16 (get next cursor-update))))
+            (cursor-message-type (unwrap-panic (contract-call? .hk-cursor-v1 read-u8 (get next cursor-message-size))))
+            (cursor-price-identifier (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-message-type))))
+            (cursor-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price-identifier))))
+            (cursor-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price))))
+            (cursor-expo (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-4 (get next cursor-conf))))
+            (cursor-publish-time (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-expo))))
+            (cursor-prev-publish-time (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-publish-time))))
+            (cursor-ema-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-prev-publish-time))))
+            (cursor-ema-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-ema-price))))
+            (cursor-proof (contract-call? .hk-cursor-v1 advance (get next cursor-message-size) (get value cursor-message-size)))
+            (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v1 read-u8 cursor-proof)))
+            (proof-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-proof-size) none))
+            (leaf-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-message-size) (some (get value cursor-message-size))))
             (proof (get result (fold parse-proof proof-bytes { 
               result: (list),
               cursor: {
@@ -280,8 +288,8 @@
     acc
     (if (is-eq (get index (get cursor acc)) (get next-update-index (get cursor acc)))
       ;; Parse update
-      (let ((cursor-hash (contract-call? .hk-cursor-v2 new (get bytes acc) (some (get index (get cursor acc)))))
-            (hash (get value (unwrap-panic (contract-call? .hk-cursor-v2 read-buff-20 (get next cursor-hash))))))
+      (let ((cursor-hash (contract-call? .hk-cursor-v1 new (get bytes acc) (some (get index (get cursor acc)))))
+            (hash (get value (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-hash))))))
         ;; Perform assertions
         {
           cursor: { 
@@ -302,3 +310,27 @@
           result: (get result acc),
           limit: (get limit acc)
       })))
+
+(define-private (cast-decoded-price (entry 
+        {
+          price-identifier: (buff 32),
+          price: int,
+          conf: uint,
+          expo: int,
+          publish-time: uint,
+          prev-publish-time: uint,
+          ema-price: int,
+          ema-conf: uint,
+          proof: (list 128 (buff 20)),
+          leaf-bytes: (buff 255)
+        }))
+  {
+    price-identifier: (get price-identifier entry),
+    price: (get price entry),
+    conf: (get conf entry),
+    expo: (get expo entry),
+    publish-time: (get publish-time entry),
+    prev-publish-time: (get prev-publish-time entry),
+    ema-price: (get ema-price entry),
+    ema-conf: (get ema-conf entry)
+  })
