@@ -6,7 +6,7 @@
 ;;;; Traits
 
 ;; Implements trait specified in wormhole-core-trait contract
-(impl-trait .wormhole-core-trait.wormhole-core-trait)
+(impl-trait .wormhole-traits-v1.core-trait)
 
 ;;;; Constants
 
@@ -118,7 +118,7 @@
               value: (list),
               iter: (get value cursor-signatures-len)
           }))
-        (vaa-body-hash (keccak256 (keccak256 (get value (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-2048 (get next cursor-signatures))
+        (vaa-body-hash (keccak256 (keccak256 (get value (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-8192 (get next cursor-signatures))
           ERR_VAA_HASHING_BODY)))))
         (cursor-timestamp (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-signatures)) 
           ERR_VAA_PARSING_TIMESTAMP))
@@ -132,7 +132,7 @@
           ERR_VAA_PARSING_SEQUENCE))
         (cursor-consistency-level (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-sequence)) 
           ERR_VAA_PARSING_CONSISTENCY_LEVEL))
-        (cursor-payload (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-2048 (get next cursor-consistency-level))
+        (cursor-payload (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-8192 (get next cursor-consistency-level))
           ERR_VAA_PARSING_PAYLOAD))
         (public-keys-results (fold
           batch-recover-public-keys
@@ -295,7 +295,7 @@
 (define-private (is-eth-address-matching-public-key (uncompressed-public-key (buff 64)) (eth-address (buff 20)))
   (is-eq (unwrap-panic (slice? (keccak256 uncompressed-public-key) u12 u32)) eth-address))
 
-(define-private (parse-guardian (cue-position uint) (acc { bytes: (buff 2048), result: (list 20 (buff 20))}))
+(define-private (parse-guardian (cue-position uint) (acc { bytes: (buff 8192), result: (list 20 (buff 20))}))
   (let (
     (cursor-address-bytes (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-20 { bytes: (get bytes acc), pos: cue-position })))
   )
@@ -317,7 +317,7 @@
     { set-id: new-set-id, guardians: new-guardians }))
 
 ;; @desc Parse and verify payload's VAA  
-(define-private (parse-and-verify-guardians-set (bytes (buff 2048)))
+(define-private (parse-and-verify-guardians-set (bytes (buff 8192)))
   (let 
       ((cursor-module (unwrap! (contract-call? .hk-cursor-v1 read-buff-32 { bytes: bytes, pos: u0 }) 
           ERR_GSU_PARSING_MODULE))

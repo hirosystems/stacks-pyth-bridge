@@ -94,10 +94,10 @@
         next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) actual-len) }
     }))
 
-(define-read-only (read-remaining-bytes-max-2048 (cursor { bytes: (buff 8192), pos: uint }))
+(define-read-only (read-remaining-bytes-max-8192 (cursor { bytes: (buff 8192), pos: uint }))
     (ok { 
-        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+  (get pos cursor) (- (len (get bytes cursor)) (get pos cursor)))) (err u1)) u2048) (err u1)), 
-        next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u32) }
+        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+  (get pos cursor) (- (len (get bytes cursor)) (get pos cursor)))) (err u1)) u8192) (err u1)), 
+        next: { bytes: (get bytes cursor), pos: (get pos cursor) }
     }))
 
 (define-read-only (new (bytes (buff 8192)) (offset (optional uint)))
