@@ -6,8 +6,8 @@ telemetry = false
 cache_dir = './.cache'
 requirements = []
 
-[contracts.pyth-proxy-v1]
-path = 'contracts/pyth-proxy-v1.clar'
+[contracts.pyth-governance-v1]
+path = 'contracts/pyth-governance-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
@@ -16,8 +16,19 @@ path = 'contracts/pyth-oracle-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
-[contracts.pyth-oracle-trait]
-path = 'contracts/pyth-oracle-trait.clar'
+[contracts.pyth-store-v1]
+path = 'contracts/pyth-store-v1.clar'
+clarity_version = 2
+epoch = 2.4
+
+
+[contracts.pyth-pnau-decoder-v1]
+path = 'contracts/pyth-pnau-decoder-v1.clar'
+clarity_version = 2
+epoch = 2.4
+
+[contracts.pyth-traits-v1]
+path = 'contracts/pyth-traits-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
@@ -26,8 +37,8 @@ path = 'contracts/wormhole/wormhole-core-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
-[contracts.wormhole-core-trait]
-path = 'contracts/wormhole/wormhole-core-trait.clar'
+[contracts.wormhole-traits-v1]
+path = 'contracts/wormhole/wormhole-traits-v1.clar'
 clarity_version = 2
 epoch = 2.4
 

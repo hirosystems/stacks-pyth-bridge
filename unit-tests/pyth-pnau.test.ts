@@ -5,6 +5,8 @@ import { tx } from "@hirosystems/clarinet-sdk";
 import { mainnet_valid_guardians_set_upgrades, mainnet_valid_au } from "./constants";
 
 const pyth_oracle_v1_contract_name = "pyth-oracle-v1";
+const pyth_decoder_pnau_v1_contract_name = "pyth-pnau-decoder-v1";
+const pyth_storage_v1_contract_name = "pyth-store-v1";
 const wormhole_core_v1_contract_name = "wormhole-core-v1";
 
 describe("Pyth (PNAU) testsuite", () => {
@@ -48,11 +50,16 @@ describe("Pyth (PNAU) testsuite", () => {
     });
 
     const vaaBytes = Cl.bufferFromHex(mainnet_valid_au[0]);
-    const wormholeContract = Cl.contractPrincipal(simnet.deployer, wormhole_core_v1_contract_name)
+    const executionPlan = Cl.tuple({
+      'pyth-storage-contract': Cl.contractPrincipal(simnet.deployer, pyth_storage_v1_contract_name),
+      'pyth-decoder-contract': Cl.contractPrincipal(simnet.deployer, pyth_decoder_pnau_v1_contract_name),
+      'wormhole-core-contract': Cl.contractPrincipal(simnet.deployer, wormhole_core_v1_contract_name),
+    });
+    
     let res = simnet.callPublicFn(
       pyth_oracle_v1_contract_name,
-      "decode-pnau-price-update",
-      [vaaBytes, wormholeContract],
+      "verify-and-update-price-feeds",
+      [vaaBytes, executionPlan],
       sender
     );
 
