@@ -28,7 +28,7 @@ Price feeds are available on multiple blockchains and can be used in off-chain a
 
 ## Setup and Test a Devnet Bridge
 
-The bridge is being operated through an off-chain service, `stacks-path-relayer`, and a set of contracts implementing the core functionalities specified by the Wormhole protocol. 
+The bridge is being operated through an off-chain service, `stacks-pyth-relayer`, and a set of contracts implementing the core functionalities specified by the Wormhole protocol. 
 
 The contracts are developed in Clarity and use Clarinet for its test harnessing.
 This guide assumes that a recent installation of Clarinet (available on brew and winget) is available locally. 
@@ -137,7 +137,7 @@ The authenticity of the price feeds is verified during their ingestion, making t
 
 Each Pyth Network price feed is referred to via a unique ID. Price feeds also have different IDs in mainnets than testnets or devnets. The full list of price feeds is listed on the [pyth.network website](https://pyth.network/price-feeds/). The price feed IDs page lists the ID of each available price feed on every chain where they are available. To use a price feed on-chain, look up its ID using these pages, then store the feed ID in your program for price feed queries.
 
-Price Feeds usage and best practices are described on the [pyth.network developer documentation website](https://docs.pyth.network/pythnet-price-feeds/best-practices). 
+Price Feeds usage and best practices are described on the [pyth.network developer documentation website](https://docs.pyth.network/documentation/pythnet-price-feeds/best-practices).
 
 
 #### Prices currently supported on Testnet
