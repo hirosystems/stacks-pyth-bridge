@@ -183,10 +183,8 @@ These events can be observed using [Chainhook](https://github.com/hirosystems/ch
 
 ## Todos:
 
-- [] Support for `PNAU` wire format
-- [] Resolve todos, mostly aiming at adding more checks in both wormhole and pyth contracts
-- [] Address insufficient test coverage
-- [] Add a method to update the list of price feeds watched
-- [] Resolve build warnings
-- [] Improve documentation
-- [] Add example
+- [ ] Resolve todos, mostly aiming at adding more checks in both wormhole and pyth contracts
+- [ ] Address insufficient test coverage
+- [ ] Resolve build warnings
+- [ ] Improve documentation
+- [ ] Add example
