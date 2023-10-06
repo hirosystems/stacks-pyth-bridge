@@ -176,7 +176,6 @@ plan:
                 0xee3d4cc17633afe7e1794fcfd728e0643325e3d130eb1daa39c0c5cb05a200b43876117a182cabdcc3795632aa529473a0c8245f9e4f6e43e54c3f1da28bcb82
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
-      epoch: "2.4"
         - emulated-contract-call:
             contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.pyth-oracle-dev-preview-1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM

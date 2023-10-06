@@ -1,28 +1,30 @@
 (define-map liquidity-providers-balances principal { cbtc-balance: uint, stx-balance: uint })
 
-;; To complete
+;; To complete: cbtc-sats-in must be updating liquidity-providers-balances
 (define-public (add-cbtc-liquidity (cbtc-sats-in uint))
   (let ((balance u0))
-    (unwrap! (contract-call? .cbtc-token transfer cbtc-in tx-sender (as-contract tx-sender) none) (err u1))
-    (ok cbtc-in)))
+    (unwrap! (contract-call? .cbtc-token transfer cbtc-sats-in tx-sender (as-contract tx-sender) none) (err u1))
+    (ok cbtc-sats-in)))
 
-;; To complete
+;; To complete: cbtc-sats-out must be checking/updating liquidity-providers-balances
 (define-public (remove-cbtc-liquidity (cbtc-sats-out uint))
   (let ((balance u0))
-    (unwrap! (contract-call? .cbtc-token transfer cbtc-out (as-contract tx-sender) tx-sender none) (err u1))
-    (ok cbtc-out)))
+    (unwrap! (contract-call? .cbtc-token transfer cbtc-sats-out (as-contract tx-sender) tx-sender none) (err u1))
+    (ok cbtc-sats-out)))
 
-;; To complete
+;; To complete: stx-out must be checking/updating liquidity-providers-balances
 (define-public (withdraw-stx (stx-out uint))
-  (ok u1))
+  (let ((balance u0))
+    (unwrap! (stx-transfer? stx-out (as-contract tx-sender) tx-sender) (err u1))
+    (ok stx-out)))
 
 (define-public (swap-stx (stx-in uint))
   (let ((stx-price (try! (read-stx-price-from-pyth)))
         (btc-price (try! (read-btc-price-from-pyth)))
         (sat-price (* u100000000 btc-price))
         (cbtc-sats-out (/ (* stx-in sat-price) stx-price)))
-    (unwrap! (contract-call? .cbtc-token transfer cbtc-sats-out (as-contract tx-sender) tx-sender none) (err u1))
-    (unwrap! (stx-transfer? stx-in tx-sender (as-contract tx-sender)) (err u1))
+    (unwrap! (contract-call? .cbtc-token transfer cbtc-sats-out (as-contract tx-sender) tx-sender none) (err u1000))
+    (unwrap! (stx-transfer? stx-in tx-sender (as-contract tx-sender)) (err u1000))
     (ok { stx-in: stx-in, cbtc-sats-out: cbtc-sats-out } )))
 
 (define-public (swap-stx-trustless (stx-in uint) (stx-price-feed (buff 2048)) (btc-price-feed (buff 2048)))
@@ -30,8 +32,8 @@
         (btc-price (try! (update-and-read-btc-price-from-pyth btc-price-feed)))
         (sat-price (* u100000000 btc-price))
         (cbtc-sats-out (/ (* stx-in sat-price) (* stx-price))))
-    (unwrap! (contract-call? .cbtc-token transfer cbtc-sats-out (as-contract tx-sender) tx-sender none) (err u1))
-    (unwrap! (stx-transfer? stx-in tx-sender (as-contract tx-sender)) (err u1))
+    (unwrap! (contract-call? .cbtc-token transfer cbtc-sats-out (as-contract tx-sender) tx-sender none) (err u1000))
+    (unwrap! (stx-transfer? stx-in tx-sender (as-contract tx-sender)) (err u1000))
     (ok { stx-in: stx-in, cbtc-sats-out: cbtc-sats-out } )))
 
 (define-private (update-and-read-stx-price-from-pyth (stx-price-feed (buff 2048))) 
