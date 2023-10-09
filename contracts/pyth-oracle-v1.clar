@@ -1,3 +1,8 @@
+;; Title: pyth-oracle
+;; Version: v1
+;; Check for latest version: https://github.com/hirosystems/stacks-pyth-bridge#latest-version
+;; Report an issue: https://github.com/hirosystems/stacks-pyth-bridge/issues
+
 (use-trait pyth-storage-trait .pyth-traits-v1.storage-trait)
 (use-trait pyth-decoder-trait .pyth-traits-v1.decoder-trait)
 (use-trait wormhole-core-trait .wormhole-traits-v1.core-trait)
@@ -30,9 +35,11 @@
     (let ((pyth-decoder-contract (get pyth-decoder-contract execution-plan))
           (wormhole-core-contract (get wormhole-core-contract execution-plan))
           (pyth-storage-contract (get pyth-storage-contract execution-plan))
-          (prices-updates (try! (contract-call? pyth-decoder-contract decode-and-verify-price-feeds price-feed-bytes wormhole-core-contract))))
+          (prices-updates (try! (contract-call? pyth-decoder-contract decode-and-verify-price-feeds price-feed-bytes wormhole-core-contract)))
+          (fee-info (contract-call? .pyth-governance-v1 get-fee-info))
+          (fee-amount (* (get mantissa fee-info) (pow u10 (get exponent fee-info)))))
       ;; Charge fee
-      (try! (contract-call? .pyth-governance-v1 charge-fee (len prices-updates)))
+      (unwrap! (stx-transfer? (* (len prices-updates) fee-amount) tx-sender (get address fee-info)) (err u0))
       ;; Update storage
       (try! (contract-call? pyth-storage-contract write-batch prices-updates))
       (ok prices-updates))))

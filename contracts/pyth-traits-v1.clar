@@ -1,3 +1,8 @@
+;; Title: pyth-traits
+;; Version: v1
+;; Check for latest version: https://github.com/hirosystems/stacks-pyth-bridge#latest-version
+;; Report an issue: https://github.com/hirosystems/stacks-pyth-bridge/issues
+
 (use-trait wormhole-core-trait .wormhole-traits-v1.core-trait)
 
 (define-trait decoder-trait
