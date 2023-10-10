@@ -219,11 +219,11 @@
 (define-private (parse-and-verify-governance-instruction (ptgm-bytes (buff 8192)))
     (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: ptgm-bytes, pos: u0 }) 
             (err u0)))
-          (cursor-module (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-magic)) 
+          (cursor-module (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-magic)) 
             (err u1)))
           (cursor-action (unwrap! (contract-call? .hk-cursor-v1 read-buff-1 (get next cursor-module)) 
             (err u2)))
-          (cursor-target-chain-id (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-action)) 
+          (cursor-target-chain-id (unwrap! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-action)) 
             (err u3))))
         ;; Check magic bytes
         (asserts! (is-eq (get value cursor-magic) PTGM_MAGIC) (err u1))
@@ -239,9 +239,9 @@
   (let ((gi (try! (parse-and-verify-governance-instruction fee-value-bytes))))
       (asserts! (is-eq (get action gi) GOVERNANCE_SET_FEE) (err u1))
       ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-mantissa (unwrap! (contract-call? .hk-cursor-v1 read-u64 (get next (get cursor gi))) 
+      (let ((cursor-mantissa (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next (get cursor gi))) 
               (err u100)))
-            (cursor-exponent (unwrap! (contract-call? .hk-cursor-v1 read-u64 (get next cursor-mantissa)) 
+            (cursor-exponent (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-mantissa)) 
               (err u100))))
     (ok { 
       mantissa: (get value cursor-mantissa), 
@@ -310,7 +310,7 @@
   (let ((gi (try! (parse-and-verify-governance-instruction prices-data-sources-bytes))))
       (asserts! (is-eq (get action gi) GOVERNANCE_SET_DATA_SOURCES) (err u1))
       ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-num-data-sources (try! (contract-call? .hk-cursor-v1 read-u8 { bytes: prices-data-sources-bytes, pos: u0 })))
+      (let ((cursor-num-data-sources (try! (contract-call? .hk-cursor-v1 read-uint-8 { bytes: prices-data-sources-bytes, pos: u0 })))
             (cursor-data-sources-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-num-data-sources) none))
             (data-sources (get result (fold parse-data-sources cursor-data-sources-bytes { 
               result: (list), 
@@ -339,7 +339,7 @@
     (if (is-eq (get index (get cursor acc)) (get next-update-index (get cursor acc)))
       ;; Parse update
       (let ((buffer (contract-call? .hk-cursor-v1 new (get bytes acc) (some (get index (get cursor acc)))))
-            (cursor-emitter-chain (unwrap-panic (contract-call? .hk-cursor-v1 read-u8 (get next buffer))))
+            (cursor-emitter-chain (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 (get next buffer))))
             (cursor-emitter-address (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-emitter-chain)))))
         ;; Perform assertions
         {

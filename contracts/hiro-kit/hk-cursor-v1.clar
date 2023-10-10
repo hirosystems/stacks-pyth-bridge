@@ -1,28 +1,28 @@
-(define-read-only (read-u8 (cursor { bytes: (buff 8192), pos: uint }))
+(define-read-only (read-uint-8 (cursor { bytes: (buff 8192), pos: uint }))
     (ok { 
         value: (buff-to-uint-be (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) u1)) (err u1)) u1) (err u1))), 
         next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u1) }
     }))
 
-(define-read-only (read-u16 (cursor { bytes: (buff 8192), pos: uint }))
+(define-read-only (read-uint-16 (cursor { bytes: (buff 8192), pos: uint }))
     (ok { 
         value: (buff-to-uint-be (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) u2)) (err u1)) u2) (err u1))), 
         next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u2) }
     }))
 
-(define-read-only (read-u32 (cursor { bytes: (buff 8192), pos: uint }))
+(define-read-only (read-uint-32 (cursor { bytes: (buff 8192), pos: uint }))
     (ok { 
         value: (buff-to-uint-be (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor)  (+ (get pos cursor) u4)) (err u1)) u4) (err u1))), 
         next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u4) }
     }))
 
-(define-read-only (read-u64 (cursor { bytes: (buff 8192), pos: uint }))
+(define-read-only (read-uint-64 (cursor { bytes: (buff 8192), pos: uint }))
     (ok { 
         value: (buff-to-uint-be (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor)  (+ (get pos cursor) u8)) (err u1)) u8) (err u1))), 
         next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u8) }
     }))
 
-(define-read-only (read-u128 (cursor { bytes: (buff 8192), pos: uint }))
+(define-read-only (read-uint-128 (cursor { bytes: (buff 8192), pos: uint }))
     (ok { 
         value: (buff-to-uint-be (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor)  (+ (get pos cursor) u16)) (err u1)) u16) (err u1))), 
         next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u16) }

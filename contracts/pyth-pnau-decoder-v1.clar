@@ -50,7 +50,7 @@
 ;; #[filter(pnau-bytes, wormhole-core-address)]
 (define-public (decode-pnau-price-update (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
     (let ((cursor-pnau-header (try! (parse-pnau-header pnau-bytes)))
-          (cursor-pnau-vaa-size (try! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-pnau-header))))
+          (cursor-pnau-vaa-size (try! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-pnau-header))))
           (cursor-pnau-vaa (try! (contract-call? .hk-cursor-v1 read-buff-max-len-8192 (get next cursor-pnau-vaa-size) (get value cursor-pnau-vaa-size))))
           (vaa (try! (contract-call? wormhole-core-address parse-and-verify-vaa (get value cursor-pnau-vaa))))
           (cursor-merkle-root-data (try! (parse-merkle-root-data-from-vaa-payload (get payload vaa))))
@@ -65,11 +65,11 @@
 (define-private (parse-merkle-root-data-from-vaa-payload (payload-vaa-bytes (buff 8192)))
   (let ((cursor-payload-type (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: payload-vaa-bytes, pos: u0 }) 
           (err u0)))
-        (cursor-wh-update-type (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-payload-type)) 
+        (cursor-wh-update-type (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-payload-type)) 
           (err u0)))
-        (cursor-merkle-root-slot (unwrap! (contract-call? .hk-cursor-v1 read-u64 (get next cursor-wh-update-type)) 
+        (cursor-merkle-root-slot (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-wh-update-type)) 
           (err u0)))
-        (cursor-merkle-root-ring-size (unwrap! (contract-call? .hk-cursor-v1 read-u32 (get next cursor-merkle-root-slot)) 
+        (cursor-merkle-root-ring-size (unwrap! (contract-call? .hk-cursor-v1 read-uint-32 (get next cursor-merkle-root-slot)) 
           (err u0)))
         (cursor-merkle-root-hash (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-merkle-root-ring-size)) 
           (err u0))))
@@ -90,13 +90,13 @@
 (define-read-only (parse-pnau-header (pf-bytes (buff 8192)))
   (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: pf-bytes, pos: u0 }) 
           ERR_MAGIC_BYTES))
-        (cursor-version-maj (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-magic)) 
+        (cursor-version-maj (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-magic)) 
           ERR_VERSION_MAJ))
-        (cursor-version-min (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-version-maj)) 
+        (cursor-version-min (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-version-maj)) 
           ERR_VERSION_MIN))
-        (cursor-header-trailing-size (unwrap! (contract-call? .hk-cursor-v1 read-u8 (get next cursor-version-min)) 
+        (cursor-header-trailing-size (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-version-min)) 
           ERR_HEADER_TRAILING_SIZE))
-        (cursor-proof-type (unwrap! (contract-call? .hk-cursor-v1 read-u8 {
+        (cursor-proof-type (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 {
             bytes: pf-bytes,
             pos: (+ (get pos (get next cursor-header-trailing-size)) (get value cursor-header-trailing-size))})
           ERR_PROOF_TYPE)))
@@ -120,7 +120,7 @@
     })))
 
 (define-read-only (parse-and-verify-prices-updates (bytes (buff 8192)) (merkle-root-hash (buff 20)))
-  (let ((cursor-num-updates (try! (contract-call? .hk-cursor-v1 read-u8 { bytes: bytes, pos: u0 })))
+  (let ((cursor-num-updates (try! (contract-call? .hk-cursor-v1 read-uint-8 { bytes: bytes, pos: u0 })))
         (cursor-updates-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-num-updates) none))
         (updates (get result (fold parse-price-info-and-proof cursor-updates-bytes { 
           result: (list), 
@@ -193,8 +193,8 @@
     (if (is-eq (get index (get cursor acc)) (get next-update-index (get cursor acc)))
       ;; Parse update
       (let ((cursor-update (contract-call? .hk-cursor-v1 new (get bytes acc) (some (get index (get cursor acc)))))
-            (cursor-message-size (unwrap-panic (contract-call? .hk-cursor-v1 read-u16 (get next cursor-update))))
-            (cursor-message-type (unwrap-panic (contract-call? .hk-cursor-v1 read-u8 (get next cursor-message-size))))
+            (cursor-message-size (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-update))))
+            (cursor-message-type (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-message-size))))
             (cursor-price-identifier (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-message-type))))
             (cursor-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price-identifier))))
             (cursor-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price))))
@@ -204,7 +204,7 @@
             (cursor-ema-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-prev-publish-time))))
             (cursor-ema-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-ema-price))))
             (cursor-proof (contract-call? .hk-cursor-v1 advance (get next cursor-message-size) (get value cursor-message-size)))
-            (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v1 read-u8 cursor-proof)))
+            (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 cursor-proof)))
             (proof-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-proof-size) none))
             (leaf-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-message-size) (some (get value cursor-message-size))))
             (proof (get result (fold parse-proof proof-bytes { 
