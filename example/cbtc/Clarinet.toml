@@ -1,0 +1,25 @@
+[project]
+name = "cbtc"
+authors = []
+description = ""
+telemetry = false
+
+[[project.requirements]]
+contract_id = "SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard"
+
+[[project.requirements]]
+contract_id = "SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.pyth-oracle-dev-preview-1"
+
+[contracts.cbtc-token]
+path = "contracts/cbtc-token.clar"
+clarity_version = 2
+epoch = "2.4"
+
+[contracts.cbtc-pool]
+path = "contracts/cbtc-pool.clar"
+clarity_version = 2
+epoch = "2.4"
+
+
+[repl.analysis]
+passes = []
