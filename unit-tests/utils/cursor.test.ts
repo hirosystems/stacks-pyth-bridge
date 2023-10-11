@@ -13,7 +13,15 @@ describe("hiro-kit::cursor - buffers", () => {
     const buff_n = (n: number) => {
         return fc.uint8Array({ minLength: 0, maxLength: n })
     }
-    
+
+    const bytesToRead = () => {
+        return fc.constantFrom(1, 2, 4, 8, 16, 20, 64, 65)
+    }
+
+    const bytesToGenerate = (n: number) => {
+        return fc.uint8Array({ minLength: 0, maxLength: n })
+    }
+
     it.prop([buff_n(8192)])("read-buff-1", (numbers) => {
         var data = new Uint8Array();
         for (let n of numbers) {
@@ -44,7 +52,7 @@ describe("hiro-kit::cursor - buffers", () => {
         }
     })
 
-    it.prop([fc.uniqueArray(fc.constantFrom(1, 2, 4, 8, 16, 20, 64, 65))])("read-buff-n", (buffer) => {
+    it.prop([fc.uniqueArray(bytesToRead())])("read-buff-n", (buffer) => {
         var data = new Uint8Array();
         let segments = [];
         for (let value of buffer) {
@@ -81,6 +89,133 @@ describe("hiro-kit::cursor - buffers", () => {
             }))
         }
     })
+
+    it.prop([bytesToRead(), bytesToGenerate(8192)])("read-buff-8192-max and slice", (toRead, toGenerate) => {
+        var data = new Uint8Array();
+        for (let n of toGenerate) {
+            data = concatTypedArrays(data, uint8toBytes(n));
+        }
+        let input = Cl.tuple({
+            bytes: Cl.buffer(data),
+            pos: Cl.uint(0)
+        })
+
+        let res = simnet.callReadOnlyFn(
+            cursor_contract_name,
+            `read-buff-${toRead}`,
+            [input],
+            sender
+        );
+
+        // Early return: we're tryint to read more byte than the len of the buffer
+        if (toRead > data.length) {
+            expect(res.result).toBeErr(Cl.uint(1))
+            return;
+        } 
+        
+        let expectedCursor = Cl.tuple({
+            bytes: Cl.buffer(data),
+            pos: Cl.uint(toRead)
+        });
+
+        expect(res.result).toBeOk(Cl.tuple({
+            value: Cl.buffer(data.subarray(0, toRead)),
+            next: expectedCursor
+        }))
+
+        res = simnet.callReadOnlyFn(
+            cursor_contract_name,
+            `read-buff-8192-max`,
+            [expectedCursor, Cl.none()],
+            sender
+        );
+
+        // Early return: we're tryint to read more byte than the len of the buffer
+        if (toRead == data.length) {
+            expect(res.result).toBeErr(Cl.uint(1))
+            return;
+        }
+
+        let finalCursor = Cl.tuple({
+            bytes: Cl.buffer(data),
+            pos: Cl.uint(data.length)
+        });
+
+        let expectedBuffer = Cl.buffer(data.subarray(toRead, data.length));
+
+        expect(res.result).toBeOk(Cl.tuple({
+            value: expectedBuffer,
+            next: finalCursor
+        }))
+
+        res = simnet.callReadOnlyFn(
+            cursor_contract_name,
+            `slice`,
+            [expectedCursor, Cl.none()],
+            sender
+        );
+        expect(Cl.ok(res.result)).toBeOk(expectedBuffer);
+    })
+
+    it.prop([bytesToRead(), bytesToRead(), bytesToGenerate(8192)])("read-buff-8192-max with limit and slice", (toRead, toIsolate, toGenerate) => {
+        var data = new Uint8Array();
+        for (let n of toGenerate) {
+            data = concatTypedArrays(data, uint8toBytes(n));
+        }
+        let input = Cl.tuple({
+            bytes: Cl.buffer(data),
+            pos: Cl.uint(0)
+        })
+
+        let res = simnet.callReadOnlyFn(
+            cursor_contract_name,
+            `read-buff-${toRead}`,
+            [input],
+            sender
+        );
+
+        // Early return: we're tryint to read more byte than the len of the buffer
+        if (toRead > data.length) {
+            expect(res.result).toBeErr(Cl.uint(1))
+            return;
+        } 
+        
+        let expectedCursor = Cl.tuple({
+            bytes: Cl.buffer(data),
+            pos: Cl.uint(toRead)
+        });
+
+        expect(res.result).toBeOk(Cl.tuple({
+            value: Cl.buffer(data.subarray(0, toRead)),
+            next: expectedCursor
+        }))
+
+        res = simnet.callReadOnlyFn(
+            cursor_contract_name,
+            `read-buff-8192-max`,
+            [expectedCursor, Cl.some(Cl.uint(toIsolate))],
+            sender
+        );
+
+        // Early return: we're tryint to read more byte than the len of the buffer
+        if (toRead + toIsolate > data.length) {
+            expect(res.result).toBeErr(Cl.uint(1))
+            return;
+        }
+
+        let finalCursor = Cl.tuple({
+            bytes: Cl.buffer(data),
+            pos: Cl.uint(toRead + toIsolate)
+        });
+
+        let expectedBuffer = Cl.buffer(data.subarray(toRead, toRead + toIsolate));
+
+        expect(res.result).toBeOk(Cl.tuple({
+            value: expectedBuffer,
+            next: finalCursor
+        }))
+    })
+
 })
 
 describe("hiro-kit::cursor - unsigned integers", () => {
