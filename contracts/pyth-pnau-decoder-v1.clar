@@ -196,13 +196,13 @@
             (cursor-message-size (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-update))))
             (cursor-message-type (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-message-size))))
             (cursor-price-identifier (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-message-type))))
-            (cursor-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price-identifier))))
-            (cursor-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-price))))
-            (cursor-expo (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-4 (get next cursor-conf))))
-            (cursor-publish-time (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-expo))))
-            (cursor-prev-publish-time (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-publish-time))))
-            (cursor-ema-price (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-prev-publish-time))))
-            (cursor-ema-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-8 (get next cursor-ema-price))))
+            (cursor-price (unwrap-panic (contract-call? .hk-cursor-v1 read-int-64 (get next cursor-price-identifier))))
+            (cursor-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-price))))
+            (cursor-expo (unwrap-panic (contract-call? .hk-cursor-v1 read-int-32 (get next cursor-conf))))
+            (cursor-publish-time (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-expo))))
+            (cursor-prev-publish-time (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-publish-time))))
+            (cursor-ema-price (unwrap-panic (contract-call? .hk-cursor-v1 read-int-64 (get next cursor-prev-publish-time))))
+            (cursor-ema-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-ema-price))))
             (cursor-proof (contract-call? .hk-cursor-v1 advance (get next cursor-message-size) (get value cursor-message-size)))
             (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 cursor-proof)))
             (proof-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-proof-size) none))
@@ -224,13 +224,13 @@
           bytes: (get bytes acc),
           result: (unwrap-panic (as-max-len? (append (get result acc) {
             price-identifier: (get value cursor-price-identifier),
-            price: (buff-to-int-be (get value cursor-price)),
-            conf: (buff-to-uint-be (get value cursor-conf)),
-            expo: (buff-to-int-be (get value cursor-expo)),
-            publish-time: (buff-to-uint-be (get value cursor-publish-time)),
-            prev-publish-time: (buff-to-uint-be (get value cursor-prev-publish-time)),
-            ema-price: (buff-to-int-be (get value cursor-ema-price)),
-            ema-conf: (buff-to-uint-be (get value cursor-ema-conf)),
+            price: (get value cursor-price),
+            conf: (get value cursor-conf),
+            expo:(get value cursor-expo),
+            publish-time: (get value cursor-publish-time),
+            prev-publish-time: (get value cursor-prev-publish-time),
+            ema-price: (get value cursor-ema-price),
+            ema-conf: (get value cursor-ema-conf),
             proof: proof,
             leaf-bytes: (unwrap-panic (as-max-len? leaf-bytes u255))
           }) u64)),

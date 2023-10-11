@@ -103,7 +103,7 @@
     (let ((cursor-bytes (try! (read-buff-16 cursor))))
         (ok (merge 
             cursor-bytes 
-            { value: (bit-shift-right (bit-shift-left (buff-to-int-be (get value cursor-bytes)) u0) u0) }))))
+            { value: (buff-to-int-be (get value cursor-bytes)) }))))
 
 (define-read-only (read-buff-max-len-255 (cursor { bytes: (buff 255), pos: uint }) (actual-len uint))
     (ok {
