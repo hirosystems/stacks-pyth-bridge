@@ -1,3 +1,5 @@
+;; Title: hiro-merkle-tree-keccak160
+;; Version: v1
 
 (define-read-only (keccak160 (bytes (buff 1024)))
     (unwrap-panic (as-max-len? (unwrap-panic (slice? (keccak256 bytes) u0 u20)) u20)))

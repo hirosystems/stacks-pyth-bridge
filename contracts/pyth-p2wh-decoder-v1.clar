@@ -1,4 +1,4 @@
-;; Title: pyth-oracle
+;; Title: pyth-p2wh-decoder-v1
 ;; Version: Developer Preview 1
 ;; Check for latest version: https://github.com/hirosystems/stacks-pyth-bridge#latest-version
 ;; Report an issue: https://github.com/hirosystems/stacks-pyth-bridge/issues

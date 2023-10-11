@@ -4,10 +4,10 @@ import { tx } from "@hirosystems/clarinet-sdk";
 
 import { mainnet_valid_guardians_set_upgrades } from "./constants";
 
-const wormhole_core_v1_contract_name = "wormhole-core-dev-preview-1";
+const wormhole_core_v1_contract_name = "wormhole-core-v1";
 
 describe("Wormhole testsuite", () => {
-  const accounts = vm.getAccounts();
+  const accounts = simnet.getAccounts();
   const sender = accounts.get("wallet_1")!;
 
   it("ensure that guardians set can be rotated", () => {
@@ -20,7 +20,7 @@ describe("Wormhole testsuite", () => {
     const vaaRotation3 = Cl.bufferFromHex(mainnet_valid_guardians_set_upgrades[2].vaa);
     let publicKeysRotation3 = mainnet_valid_guardians_set_upgrades[2].keys.map(Cl.bufferFromHex);
 
-    const block1 = vm.mineBlock([
+    const block1 = simnet.mineBlock([
       tx.callPublicFn(
         wormhole_core_v1_contract_name,
         "update-guardians-set",
