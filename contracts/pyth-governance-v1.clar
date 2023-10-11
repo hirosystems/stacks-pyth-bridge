@@ -256,7 +256,7 @@
               (err u100)))
             (cursor-hash-bytes (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-version)) 
               (err u100)))
-            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-8192 (get next cursor-hash-bytes))
+            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-hash-bytes) none)
               (err u100)))
             (recipient (unwrap! 
               (if (is-eq u0 (len (get value cursor-contract-name)))
@@ -278,7 +278,7 @@
               (err u100)))
             (cursor-hash-bytes (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-version)) 
               (err u100)))
-            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-8192 (get next cursor-hash-bytes))
+            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-hash-bytes) none)
               (err u100)))
             (wormhole-core-address (unwrap! 
               (principal-construct? 
@@ -296,7 +296,7 @@
               (err u100)))
             (cursor-hash-bytes (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-version)) 
               (err u100)))
-            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-8192 (get next cursor-hash-bytes))
+            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-hash-bytes) none)
               (err u100)))
             (pyth-oracle-address (unwrap! 
               (principal-construct? 

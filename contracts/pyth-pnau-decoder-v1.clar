@@ -51,7 +51,7 @@
 (define-public (decode-pnau-price-update (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
     (let ((cursor-pnau-header (try! (parse-pnau-header pnau-bytes)))
           (cursor-pnau-vaa-size (try! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-pnau-header))))
-          (cursor-pnau-vaa (try! (contract-call? .hk-cursor-v1 read-buff-max-len-8192 (get next cursor-pnau-vaa-size) (get value cursor-pnau-vaa-size))))
+          (cursor-pnau-vaa (try! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-pnau-vaa-size) (some (get value cursor-pnau-vaa-size)))))
           (vaa (try! (contract-call? wormhole-core-address parse-and-verify-vaa (get value cursor-pnau-vaa))))
           (cursor-merkle-root-data (try! (parse-merkle-root-data-from-vaa-payload (get payload vaa))))
           (decoded-prices-updates (try! (parse-and-verify-prices-updates 

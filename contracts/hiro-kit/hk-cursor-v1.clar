@@ -55,6 +55,16 @@
         next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) u65) }
     }))
 
+(define-read-only (read-buff-8192-max (cursor { bytes: (buff 8192), pos: uint }) (size (optional uint)))
+    (let ((min (get pos cursor))
+          (max (match size value 
+            (+ value (get pos cursor))
+            (len (get bytes cursor)))))
+      (ok { 
+          value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) min max) (err u1)) u8192) (err u1)), 
+          next: { bytes: (get bytes cursor), pos: max }
+      })))
+
 (define-read-only (read-uint-8 (cursor { bytes: (buff 8192), pos: uint }))
     (let ((cursor-bytes (try! (read-buff-1 cursor))))
         (ok (merge cursor-bytes { value: (buff-to-uint-be (get value cursor-bytes)) }))))
@@ -105,42 +115,6 @@
             cursor-bytes 
             { value: (buff-to-int-be (get value cursor-bytes)) }))))
 
-(define-read-only (read-buff-max-len-255 (cursor { bytes: (buff 255), pos: uint }) (actual-len uint))
-    (ok {
-        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) actual-len)) (err u1)) u255) (err u1)), 
-        next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) actual-len) }
-    }))
-
-(define-read-only (read-buff-max-len-1024 (cursor { bytes: (buff 8192), pos: uint }) (actual-len uint))
-    (ok {
-        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) actual-len)) (err u1)) u1024) (err u1)), 
-        next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) actual-len) }
-    }))
-
-(define-read-only (read-buff-max-len-2048 (cursor { bytes: (buff 8192), pos: uint }) (actual-len uint))
-    (ok {
-        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) actual-len)) (err u1)) u2048) (err u1)), 
-        next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) actual-len) }
-    }))
-
-(define-read-only (read-buff-max-len-8192 (cursor { bytes: (buff 8192), pos: uint }) (actual-len uint))
-    (ok {
-        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) actual-len)) (err u1)) u8192) (err u1)), 
-        next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) actual-len) }
-    }))
-
-(define-read-only (read-buff-max-len-65535 (cursor { bytes: (buff 65535), pos: uint }) (actual-len uint))
-    (ok {
-        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+ (get pos cursor) actual-len)) (err u1)) u65535) (err u1)), 
-        next: { bytes: (get bytes cursor), pos: (+ (get pos cursor) actual-len) }
-    }))
-
-(define-read-only (read-remaining-bytes-max-8192 (cursor { bytes: (buff 8192), pos: uint }))
-    (ok { 
-        value: (unwrap! (as-max-len? (unwrap! (slice? (get bytes cursor) (get pos cursor) (+  (get pos cursor) (- (len (get bytes cursor)) (get pos cursor)))) (err u1)) u8192) (err u1)), 
-        next: { bytes: (get bytes cursor), pos: (get pos cursor) }
-    }))
-
 (define-read-only (new (bytes (buff 8192)) (offset (optional uint)))
     { 
         value: none, 
@@ -154,6 +128,6 @@
     (unwrap-panic (slice? 
         (get bytes cursor) 
         (get pos cursor) 
-        (match size 
-            value (+ (get pos cursor) value)    
-            (+ (get pos cursor) (- (len (get bytes cursor)) (get pos cursor)))))))
+        (match size value 
+          (+ (get pos cursor) value)    
+            (len (get bytes cursor))))))

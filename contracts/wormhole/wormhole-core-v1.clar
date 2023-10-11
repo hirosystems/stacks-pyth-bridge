@@ -118,7 +118,7 @@
               value: (list),
               iter: (get value cursor-signatures-len)
           }))
-        (vaa-body-hash (keccak256 (keccak256 (get value (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-8192 (get next cursor-signatures))
+        (vaa-body-hash (keccak256 (keccak256 (get value (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-signatures) none)
           ERR_VAA_HASHING_BODY)))))
         (cursor-timestamp (unwrap! (contract-call? .hk-cursor-v1 read-uint-32 (get next cursor-signatures)) 
           ERR_VAA_PARSING_TIMESTAMP))
@@ -132,7 +132,7 @@
           ERR_VAA_PARSING_SEQUENCE))
         (cursor-consistency-level (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-sequence)) 
           ERR_VAA_PARSING_CONSISTENCY_LEVEL))
-        (cursor-payload (unwrap! (contract-call? .hk-cursor-v1 read-remaining-bytes-max-8192 (get next cursor-consistency-level))
+        (cursor-payload (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-consistency-level) none)
           ERR_VAA_PARSING_PAYLOAD))
         (public-keys-results (fold
           batch-recover-public-keys
