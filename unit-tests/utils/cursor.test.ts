@@ -1,6 +1,5 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect } from "vitest";
-// import { tx } from "@hirosystems/clarinet-sdk";
 import { it, fc } from '@fast-check/vitest';
 import { concatTypedArrays, uint8toBytes, uint16toBytes, uint32toBytes, bigintToBuffer } from './helper';
 
@@ -107,7 +106,7 @@ describe("hiro-kit::cursor - buffers", () => {
             sender
         );
 
-        // Early return: we're tryint to read more byte than the len of the buffer
+        // Early return: we're trying to read more byte than the len of the buffer
         if (toRead > data.length) {
             expect(res.result).toBeErr(Cl.uint(1))
             return;
@@ -130,7 +129,7 @@ describe("hiro-kit::cursor - buffers", () => {
             sender
         );
 
-        // Early return: we're tryint to read more byte than the len of the buffer
+        // Early return: we're trying to read more byte than the len of the buffer
         if (toRead == data.length) {
             expect(res.result).toBeErr(Cl.uint(1))
             return;
@@ -174,7 +173,7 @@ describe("hiro-kit::cursor - buffers", () => {
             sender
         );
 
-        // Early return: we're tryint to read more byte than the len of the buffer
+        // Early return: we're trying to read more byte than the len of the buffer
         if (toRead > data.length) {
             expect(res.result).toBeErr(Cl.uint(1))
             return;

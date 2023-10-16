@@ -1,6 +1,5 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect, it } from "vitest";
-// import { tx } from "@hirosystems/clarinet-sdk";
 
 const merkle_contract_name = "hk-merkle-tree-keccak160-v1";
 

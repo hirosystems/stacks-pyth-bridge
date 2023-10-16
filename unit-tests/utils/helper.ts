@@ -25,15 +25,16 @@ export const uint32toBytes = (num: number) => {
 
 export function bigintToBuffer(bigintValue: bigint, byteLength: number) {
     if (bigintValue >= 0n) {
-        let hexString = bigintValue.toString(16); // Convert BigInt to hexadecimal string
-        const padding = byteLength * 2 - hexString.length; // Calculate padding
-
+        // Convert BigInt to hexadecimal string
+        let hexString = bigintValue.toString(16); 
+        // Calculate padding
+        const padding = byteLength * 2 - hexString.length; 
         // Add leading zeros for padding
         for (let i = 0; i < padding; i++) {
             hexString = '0' + hexString;
         }
-
-        return Buffer.from(hexString, 'hex'); // Create Buffer from padded hexadecimal string
+        // Create Buffer from padded hexadecimal string
+        return Buffer.from(hexString, 'hex'); 
     } else {
         // Handle negative BigInt
         const twosComplement = (BigInt(1) << BigInt(byteLength * 8)) + bigintValue;
