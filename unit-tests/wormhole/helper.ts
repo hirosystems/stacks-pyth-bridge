@@ -1,18 +1,19 @@
 import { fc } from '@fast-check/vitest';
+import { Cl, ClarityValue } from "@stacks/transactions";
 import { bigintToBuffer } from '../utils/helper';
 import * as secp from '@noble/secp256k1';
 import {
     keccak_256
-  } from '@noble/hashes/sha3';
+} from '@noble/hashes/sha3';
 import { webcrypto } from 'node:crypto';
 // @ts-ignore
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
-    
+
 import { hmac } from '@noble/hashes/hmac';
 import { sha256 } from '@noble/hashes/sha256';
 secp.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp.etc.concatBytes(...m))
 
-export namespace wormhole_fc {
+export namespace wormhole {
 
     export interface Guardian {
         guardianId: number,
@@ -22,21 +23,11 @@ export namespace wormhole_fc {
         ethereumAddress: Uint8Array,
     }
 
-    export interface VaaHeader {
-        validVersion?: boolean, 
-        validGuardianSetId?: boolean,
-        signatures?: Uint8Array[],
-    }
-
-    export interface VaaHeaderBuildOptions {
-        opts?: VaaHeader
-    }
-
-    export const generateGuardianSetKeychain = () => {
+    export const generateGuardianSetKeychain = (count = 19) => {
         let keychain = [];
-        for (let i = 0; i < 19; i++) {
+        for (let i = 0; i < count; i++) {
             let secretKey = secp.utils.randomPrivateKey();
-            let uncompressedPublicKey = secp.getPublicKey(secretKey, false);
+            let uncompressedPublicKey = secp.getPublicKey(secretKey, false).slice(1, 65);
             let ethereumAddress = keccak_256(uncompressedPublicKey).slice(12, 32);
             keychain.push({
                 guardianId: i,
@@ -49,45 +40,10 @@ export namespace wormhole_fc {
         return keychain
     }
 
-    // Helper for generating a VAA Header;
-    // Wire format reminder:
-    // ===========================
-    // VAA Header
-    // byte        version             (VAA Version)
-    // u32         guardian_set_index  (Indicates which guardian set is signing)
-    // u8          len_signatures      (Number of signatures stored)
-    // [][66]byte  signatures          (Collection of ecdsa signatures)
-    export const vaaHeader = (header?: VaaHeaderBuildOptions) => {
-        let args = [];
-        if (header && header.opts && header.opts.validVersion) {
-            args.push(fc.constant(2))
-        } else {
-            args.push(fc.nat({ max: 255 }))
-        }
-
-        if (header && header.opts && header.opts.validGuardianSetId) {
-            args.push(fc.constant(0))
-        } else {
-            args.push(fc.nat(4294967295));
-        }
-
-
-        if (header && header.opts && header.opts.signatures) {
-            // Signatures
-            args.push(fc.constant(header.opts.signatures))
-            // Random sequences that looks like signatures
-            let max = 19 - header.opts.signatures.length  
-            let min = 0  
-            args.push(fc.array(fc.uint8Array({ minLength: 66, maxLength: 66 }), { minLength: min, maxLength: max }))
-        } else {
-            // Signatures
-            args.push(fc.constant([]))
-            // Random sequences that looks like signatures
-            let max = 19
-            let min = 0  
-            args.push(fc.array(fc.uint8Array({ minLength: 66, maxLength: 66 }), { minLength: min, maxLength: max }))
-        }
-        return args
+    export interface VaaHeader {
+        version: number,
+        guardianSetId: number,
+        signatures: Uint8Array[],
     }
 
     export interface VaaBody {
@@ -95,9 +51,15 @@ export namespace wormhole_fc {
         emitterChain: number,
         nonce: number,
         emitterAddress: Uint8Array,
-        sequence: number,
+        sequence: bigint,
         consistencyLevel: number,
         payload: Uint8Array,
+    }
+
+    export interface VaaHeaderBuildOptions {
+        version?: number,
+        guardianSetId?: number,
+        signatures?: Uint8Array[],
     }
 
     export interface VaaBodyBuildOptions {
@@ -105,231 +67,277 @@ export namespace wormhole_fc {
         emitterChain?: number,
         nonce?: number,
         emitterAddress?: Uint8Array,
-        sequence?: number,
+        sequence?: bigint,
         consistencyLevel?: number,
         payload?: Uint8Array,
     }
 
-    // Helper for generating a VAA Body;
-    // Wire format reminder:
-    // ===========================
-    // VAA Body
-    // u32         timestamp           (Timestamp of the block where the source transaction occurred)
-    // u32         nonce               (A grouping number)
-    // u16         emitter_chain       (Wormhole ChainId of emitter contract)
-    // [32]byte    emitter_address     (Emitter contract address, in Wormhole format)
-    // u64         sequence            (Strictly increasing sequence, tied to emitter address & chain)
-    // u8          consistency_level   (What finality level was reached before emitting this message)
-    // []byte      payload             (VAA message content)
-    export const vaaBody = (vaa?: VaaBodyBuildOptions) => {
-        let args = [];
-        // Timestamp
-        if (vaa && vaa.opts && vaa.opts.timestamp) {
-            args.push(fc.constant(vaa.opts.timestamp));
-        } else {
-            // TODO: what is an invalid timestamp?
-            args.push(fc.nat(4294967295));
+    export namespace fc_ext {
+        // Helper for generating a VAA Body;
+        // Wire format reminder:
+        // ===========================
+        // VAA Body
+        // u32         timestamp           (Timestamp of the block where the source transaction occurred)
+        // u32         nonce               (A grouping number)
+        // u16         emitter_chain       (Wormhole ChainId of emitter contract)
+        // [32]byte    emitter_address     (Emitter contract address, in Wormhole format)
+        // u64         sequence            (Strictly increasing sequence, tied to emitter address & chain)
+        // u8          consistency_level   (What finality level was reached before emitting this message)
+        // []byte      payload             (VAA message content)
+        export const vaaBody = (opts?: VaaBodyBuildOptions) => {
+            // Timestamp
+            let timestamp = fc.nat(4294967295);
+            if (opts && opts.timestamp) {
+                timestamp = fc.constant(opts.timestamp);
+            }
+
+            // Nonce
+            let nonce = fc.nat(4294967295);
+            if (opts && opts.nonce) {
+                nonce = fc.constant(opts.nonce);
+            }
+
+            // Emitter chain
+            let emitterChain = fc.nat(65535);
+            if (opts && opts.emitterChain) {
+                emitterChain = fc.constant(opts.emitterChain);
+            }
+
+            // Emitter address
+            let emitterAddress = fc.uint8Array({ minLength: 32, maxLength: 32 });
+            if (opts && opts.emitterAddress) {
+                emitterAddress = fc.constant(opts.emitterAddress);
+            }
+
+            // Sequence
+            let sequence = fc.bigUintN(64);
+            if (opts && opts.sequence) {
+                sequence = fc.constant(opts.sequence)
+            }
+
+            // Consistency level
+            let consistencyLevel = fc.nat(255);
+            if (opts && opts.consistencyLevel) {
+                consistencyLevel = fc.constant(opts.consistencyLevel)
+            }
+
+            // Payload
+            let payload = fc.uint8Array({ minLength: 20, maxLength: 2048 });
+            if (opts && opts.payload) {
+                payload = fc.constant(opts.payload)
+            }
+
+            return fc.tuple(timestamp, nonce, emitterChain, emitterAddress, sequence, consistencyLevel, payload);
         }
 
-        // Nonce
-        if (vaa && vaa.opts && vaa.opts.nonce) {
-            args.push(fc.constant(vaa.opts.nonce));
-        } else {
-            // TODO: what is an invalid timestamp?
-            args.push(fc.nat(4294967295));
-        }
+        // Helper for generating a VAA Header;
+        // Wire format reminder:
+        // ===========================
+        // VAA Header
+        // byte        version             (VAA Version)
+        // u32         guardian_set_index  (Indicates which guardian set is signing)
+        // u8          len_signatures      (Number of signatures stored)
+        // [][66]byte  signatures          (Collection of ecdsa signatures)
+        export const vaaHeader = (opts?: VaaHeaderBuildOptions, numberOfSignatures = 19) => {
+            // Version
+            let version = fc.nat(255);
+            if (opts && opts.version) {
+                version = fc.constant(opts.version);
+            }
 
-        // Emitter chain
-        if (vaa && vaa.opts && vaa.opts.emitterChain) {
-            args.push(fc.constant(vaa.opts.emitterChain))
-        } else {
-            args.push(fc.nat(65535));
-        }
+            // Guardian set id
+            let guardianSetId = fc.nat(255);
+            if (opts && opts.guardianSetId) {
+                guardianSetId = fc.constant(opts.guardianSetId)
+            }
 
-        // Emitter address
-        if (vaa && vaa.opts && vaa.opts.emitterAddress) {
-            args.push(fc.constant(vaa.opts.emitterAddress))
-        } else {
-            args.push(fc.uint8Array({ minLength: 32, maxLength: 32 }));
-        }
+            // Specified signatures
+            let specifiedSignatures = fc.array(fc.uint8Array({ minLength: 66, maxLength: 66 }), { minLength: 0, maxLength: 0 })
+            let specifiedSignaturesLen = 0;
+            if (opts && opts.signatures) {
+                specifiedSignatures = fc.constant(opts.signatures)
+                specifiedSignaturesLen = opts.signatures.length
+            }
 
-        // Sequence
-        if (vaa && vaa.opts && vaa.opts.sequence) {
-            args.push(fc.constant(vaa.opts.sequence))
-        } else {
-            args.push(fc.bigUintN(64));
-        }
+            // Generated signatures
+            let generatedSignatures = fc.array(fc.uint8Array({ minLength: 66, maxLength: 66 }), { minLength: 0, maxLength: (numberOfSignatures - specifiedSignaturesLen) })
 
-        // Consistency level
-        if (vaa && vaa.opts && vaa.opts.consistencyLevel) {
-            args.push(fc.constant(vaa.opts.consistencyLevel))
-        } else {
-            args.push(fc.nat(255));
+            return fc.tuple(version, guardianSetId, specifiedSignatures, generatedSignatures);
         }
-        
-        // Payload
-        if (vaa && vaa.opts && vaa.opts.payload) {
-            args.push(fc.constant(vaa.opts.payload))
-        } else {
-            args.push(fc.uint8Array({ minLength: 20, maxLength: 2048 }));
-        }
-
-        return args;
     }
 
-    export const vaa = (opts: { keyChain?: Guardian[], body: VaaBody, validSig: boolean }) => {
+    export const buildValidVaaHeaderSpecs = (keychain: Guardian[], body: VaaBody, opts?: VaaHeaderBuildOptions): VaaHeaderBuildOptions => {
+
         let signatures = [];
-        if (opts.validSig && opts.keyChain && opts.validSig === true) {
-            for (let guardian of opts.keyChain) {
-                const messageHash = keccak_256(keccak_256(opts.body..payload));
-                const signature = secp.sign(messageHash, guardian.secretKey)
+        const messageHash = keccak_256(keccak_256(serializeVaaBody(body)));
 
-                const id = Buffer.alloc(1); 
-                id.writeUint8(guardian.guardianId, 0);
+        for (let guardian of keychain) {
+            const signature = secp.sign(messageHash, guardian.secretKey)
 
-                // v.writeUint8(signature.addRecoveryBit, 1);
-                if (signature.recovery) {
-                    const rec = Buffer.alloc(1); 
-                    rec.writeUint8(signature.recovery, 0);
-                    signatures.push(Buffer.concat([id, signature.toCompactRawBytes(), rec]));
-                } else {
-                    console.log(`-> ${guardian.guardianId} / ${guardian.compressedPublicKey}`);
-                    const rec = Buffer.alloc(1); 
-                    rec.writeUint8(0, 0);
-                    signatures.push(Buffer.concat([id, signature.toCompactRawBytes(), rec]));
-                }
+            const id = Buffer.alloc(1);
+            id.writeUint8(guardian.guardianId, 0);
+
+            // v.writeUint8(signature.addRecoveryBit, 1);
+            if (signature.recovery) {
+                const rec = Buffer.alloc(1);
+                rec.writeUint8(signature.recovery, 0);
+                signatures.push(Buffer.concat([id, signature.toCompactRawBytes(), rec]));
+            } else {
+                const rec = Buffer.alloc(1);
+                rec.writeUint8(0, 0);
+                signatures.push(Buffer.concat([id, signature.toCompactRawBytes(), rec]));
             }
         }
-
-        return [
-            ...vaaHeader({ opts: { 
-                validVersion: true, 
-                validGuardianSetId: true,
-                signatures: signatures,
-            }}), 
-             ...vaaBody({
-                opts: {
-                    timestamp: 0,
-                    emitterChain: 0,
-                    nonce: 0,
-                    emitterAddress: ,
-                    sequence: 0,
-                    consistencyLevel: 0,
-                    payload: opts.payload
-                }
-             })]
+        return {
+            version: opts?.version,
+            guardianSetId: opts?.guardianSetId,
+            signatures: signatures,
+        }
     }
 
-    export const serializeVaa = (version: number, guardianSetIndex: number, signatures: Uint8Array[], timestamp: number, nonce: number, emitterChain: number, emitterAddress: Uint8Array, sequence: bigint, consistencyLevel: number, payload: Uint8Array) => {
-        const components = [];
-        var v = Buffer.alloc(1); 
-        v.writeUint8(version, 0);
-        components.push(v);
-
-        v = Buffer.alloc(4); 
-        v.writeUInt32BE(guardianSetIndex, 0);
-        components.push(v);
-
-        v = Buffer.alloc(1);
-        v.writeUint8(signatures.length, 0);
-        components.push(v);
-
-        components.push(Buffer.concat(signatures));
-        
-        v = Buffer.alloc(4); 
-        v.writeUInt32BE(timestamp, 0);
-        components.push(v);
-
-        v = Buffer.alloc(4); 
-        v.writeUInt32BE(nonce, 0);
-        components.push(v);
-
-        v = Buffer.alloc(2); 
-        v.writeUInt16BE(emitterChain, 0);
-        components.push(v);
-
-        components.push(emitterAddress);
-
-        components.push(bigintToBuffer(sequence, 64));
-
-        v = Buffer.alloc(1);
-        v.writeUint8(consistencyLevel, 0);
-        components.push(v);
-
-        components.push(payload);
-
-        return Buffer.concat(components); 
+    export const buildValidVaaHeader = (keychain: Guardian[], body: VaaBody, opts: VaaHeaderBuildOptions): VaaHeader => {
+        let specs = buildValidVaaHeaderSpecs(keychain, body, opts);
+        return {
+            version: specs.version!,
+            guardianSetId: specs.guardianSetId!,
+            signatures: specs.signatures!,
+        }
     }
 
+    export const expectedDecodedVaa = (header: VaaHeader, body: VaaBody, keychain: Guardian[]): ClarityValue => {
+        let guardiansPublicKeys = [];
+        let guardiansSignatures = [];
+        for (let i = 0; i < header.signatures.length; i++) {
+            let guardianId = header.signatures[i][0];
+            if (keychain.length > i) {
+                let guardian = keychain[i];
+                guardiansPublicKeys.push(Cl.tuple({
+                    "guardian-id": Cl.uint(guardianId),
+                    "recovered-compressed-public-key": Cl.buffer(guardian.compressedPublicKey)
+                }))
+            }
+            guardiansSignatures.push(Cl.tuple({
+                "guardian-id": Cl.uint(header.signatures[i].slice(0, 1)),
+                "signature": Cl.buffer(header.signatures[i].slice(1, 66))
+            }))
+        }
 
+        return Cl.tuple({
+            "vaa": Cl.tuple({
+                "consistency-level": Cl.uint(body.consistencyLevel),
+                "version": Cl.uint(header.version),
+                "guardian-set-id": Cl.uint(header.guardianSetId),
+                "signatures-len": Cl.uint(header.signatures.length),
+                "signatures": Cl.list(guardiansSignatures),
+                "emitter-chain": Cl.uint(body.emitterChain),
+                "emitter-address": Cl.buffer(body.emitterAddress),
+                "sequence": Cl.uint(body.sequence),
+                "timestamp": Cl.uint(body.timestamp),
+                "nonce": Cl.uint(body.nonce),
+                "payload": Cl.buffer(body.payload)
+            }),
+            "recovered-public-keys": Cl.list(guardiansPublicKeys),
+        })
+    }
 
+    export interface VaaBodySpec {
+        values: VaaBody,
+        specs: (fc.Arbitrary<number> | fc.Arbitrary<Uint8Array> | fc.Arbitrary<Uint8Array[]> | fc.Arbitrary<bigint>)[]
+    }
 
-//     (define-public (update-guardians-set (guardian-set-vaa (buff 2048)) (uncompressed-public-keys (list 19 (buff 64))))
-//   (let ((vaa (if (var-get guardian-set-initialized)
-//           (try! (parse-and-verify-vaa guardian-set-vaa))
-//           (try! (parse-vaa guardian-set-vaa))))
-//         (cursor-guardians-data (try! (parse-and-verify-guardians-set (get payload vaa))))
-//         (set-id (get new-index (get value cursor-guardians-data)))
-//         (eth-addresses (get guardians-eth-addresses (get value cursor-guardians-data)))
-//         (acc (unwrap-panic (as-max-len? (list { 
-//           compressed-public-key: (unwrap-panic (as-max-len? 0x u33)), 
-//           uncompressed-public-key: (unwrap-panic (as-max-len? 0x u64))
-//         }) u20)))
-//         (consolidated-public-keys (fold 
-//           check-and-consolidate-public-keys 
-//           uncompressed-public-keys 
-//           { success: true, cursor: u0, eth-addresses: eth-addresses, result: acc }))
-//         )
-//     ;; Ensure that enough uncompressed-public-keys were provided
-//     (asserts! (is-eq (len uncompressed-public-keys) (len eth-addresses)) 
-//       ERR_GSU_UNCOMPRESSED_PUBLIC_KEYS)
-//     ;; Check guardians uncompressed-public-keys
-//     (asserts! (get success consolidated-public-keys)
-//       ERR_GSU_UNCOMPRESSED_PUBLIC_KEYS)
+    export const buildValidVaaBodySpecs = (opts?: { payload?: Uint8Array }): VaaBody => {
+        const date = Math.floor(Date.now() / 1000);
+        const timestamp = date >>> 0;
+        const payload = (opts && opts.payload && opts.payload) || new Uint8Array(32)
+        let values = {
+            timestamp: timestamp,
+            nonce: 0,
+            emitterChain: 0,
+            emitterAddress: new Uint8Array(32),
+            sequence: 0n,
+            consistencyLevel: 0,
+            payload: payload,
+        };
+        return values
+    }
 
-//     (map-set guardian-sets { set-id: set-id } 
-//       (unwrap-panic (as-max-len? 
-//         (unwrap-panic (slice? (get result consolidated-public-keys) u1 (len (get result consolidated-public-keys)))) 
-//         u19)))
-//     (var-set active-guardian-set-id set-id)
-//     (var-set guardian-set-initialized true)
-//     (ok {
-//       vaa: vaa,
-//       consolidated-public-keys: consolidated-public-keys,
+    export const assembleVaaBody = (timestamp: number | bigint | Uint8Array, nonce: number | bigint | Uint8Array, emitterChain: number | bigint | Uint8Array, emitterAddress: number | bigint | Uint8Array, sequence: number | bigint | Uint8Array, consistencyLevel: number | bigint | Uint8Array, payload: number | bigint | Uint8Array): VaaBody => {
+        return {
+            timestamp: timestamp as number,
+            nonce: nonce as number,
+            emitterChain: emitterChain as number,
+            emitterAddress: emitterAddress as Uint8Array,
+            sequence: sequence as bigint,
+            consistencyLevel: consistencyLevel as number,
+            payload: payload as Uint8Array
+        }
+    }
 
+    export const assembleVaaHeader = (version: number | bigint | Uint8Array, guardianSetId: number | bigint | Uint8Array, signatures: number | bigint | Uint8Array[]): VaaHeader => {
+        return {
+            version: version as number,
+            guardianSetId: guardianSetId as number,
+            signatures: signatures as Uint8Array[],
+        }
+    }
 
-// ((cursor-module (unwrap! (contract-call? .hk-cursor-v1 read-buff-32 { bytes: bytes, pos: u0 }) 
-// ERR_GSU_PARSING_MODULE))
-// (cursor-action (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-module)) 
-// ERR_GSU_PARSING_ACTION))
-// (cursor-chain (unwrap! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-action)) 
-// ERR_GSU_PARSING_CHAIN))
-// (cursor-new-index (unwrap! (contract-call? .hk-cursor-v1 read-uint-32 (get next cursor-chain)) 
-// ERR_GSU_PARSING_INDEX))
-// (cursor-guardians-count (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-new-index)) 
-// ERR_GSU_PARSING_GUARDIAN_LEN))
-// (guardians-bytes (unwrap! (slice? bytes (get pos (get next cursor-guardians-count)) (+ (get pos (get next cursor-guardians-count)) (* (get value cursor-guardians-count) u20)))
-// ERR_GSU_PARSING_GUARDIANS_BYTES))
-// (guardians-cues (get result (fold is-guardian-cue guardians-bytes { cursor: u0, result: (unwrap-panic (as-max-len? (list u0) u19)) })))
-// (eth-addresses-init (unwrap-panic (as-max-len? (list (unwrap-panic (as-max-len? 0x u20))) u19)))
-// (eth-addresses (get result (fold parse-guardian guardians-cues { bytes: guardians-bytes, result: eth-addresses-init }))))
-// ;; Ensure that this message was emitted from authorized module
-// (asserts! (is-eq (get value cursor-module) 0x00000000000000000000000000000000000000000000000000000000436f7265) 
-// ERR_GSU_CHECK_MODULE)
-// ;; Ensure that this message is matching the adequate action
-// (asserts! (is-eq (get value cursor-action) u2) 
-// ERR_GSU_CHECK_ACTION)
-// ;; Ensure that this message is matching the adequate action
-// (asserts! (is-eq (get value cursor-chain) u0) 
-// ERR_GSU_CHECK_CHAIN)
+    export const serializeVaa = (vaaHeader: VaaHeader, vaaBody: VaaBody) => {
 
-    export const buildGuardianRotationVaaPayload = (keyChain: Guardian[], module: number, action: number, chain: number, setId: number) => {
+        return Buffer.concat([serializeVaaHeader(vaaHeader), serializeVaaBody(vaaBody)]);
+    }
+
+    export const serializeVaaHeader = (vaaHeader: VaaHeader) => {
         const components = [];
-        var v = Buffer.alloc(4); 
-        v.writeUInt32BE(module, 0);
+        var v = Buffer.alloc(1);
+        v.writeUint8(vaaHeader.version, 0);
+        components.push(v);
+
+        v = Buffer.alloc(4);
+        v.writeUInt32BE(vaaHeader.guardianSetId, 0);
         components.push(v);
 
         v = Buffer.alloc(1);
+        v.writeUint8(vaaHeader.signatures.length, 0);
+        components.push(v);
+
+        components.push(Buffer.concat(vaaHeader.signatures));
+        return Buffer.concat(components);
+    }
+
+    export const serializeVaaBody = (vaaBody: VaaBody) => {
+        const components = [];
+        let v = Buffer.alloc(4);
+        v.writeUInt32BE(vaaBody.timestamp, 0);
+        components.push(v);
+
+        v = Buffer.alloc(4);
+        v.writeUInt32BE(vaaBody.nonce, 0);
+        components.push(v);
+
+        v = Buffer.alloc(2);
+        v.writeUInt16BE(vaaBody.emitterChain, 0);
+        components.push(v);
+
+        components.push(vaaBody.emitterAddress);
+
+        components.push(bigintToBuffer(vaaBody.sequence, 8));
+
+        v = Buffer.alloc(1);
+        v.writeUint8(vaaBody.consistencyLevel, 0);
+        components.push(v);
+
+        components.push(vaaBody.payload);
+
+        return Buffer.concat(components);
+    }
+
+    export const validGuardianRotationModule = Buffer.from('00000000000000000000000000000000000000000000000000000000436f7265', 'hex');
+
+    export const buildGuardianRotationVaaPayload = (keyChain: Guardian[], action: number, chain: number, setId: number, module = validGuardianRotationModule) => {
+        const components = [];
+        components.push(module);
+
+        let v = Buffer.alloc(1);
         v.writeUint8(action, 0);
         components.push(v);
 
@@ -337,7 +345,7 @@ export namespace wormhole_fc {
         v.writeUInt16BE(chain, 0);
         components.push(v);
 
-        v = Buffer.alloc(4); 
+        v = Buffer.alloc(4);
         v.writeUInt32BE(setId, 0);
         components.push(v);
 
@@ -349,6 +357,6 @@ export namespace wormhole_fc {
             components.push(guardian.ethereumAddress)
         }
 
-        return Buffer.concat(components); 
+        return Buffer.concat(components);
     }
 }

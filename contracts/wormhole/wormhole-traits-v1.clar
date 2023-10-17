@@ -9,11 +9,10 @@
       timestamp: uint,
       nonce: uint,
       emitter-chain: uint,
+      emitter-address: (buff 32),
       sequence: uint,
       consistency-level: uint,
       payload: (buff 8192),
-      guardians-public-keys: (list 19 { recovered-compressed-public-key: (response (buff 33) uint), guardian-id: uint }),
-      vaa-body-hash: (buff 32),
     } uint))
   )
 )
