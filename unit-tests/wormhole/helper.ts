@@ -1,4 +1,5 @@
 import { fc } from '@fast-check/vitest';
+import { tx } from "@hirosystems/clarinet-sdk";
 import { Cl, ClarityValue } from "@stacks/transactions";
 import { bigintToBuffer } from '../utils/helper';
 import * as secp from '@noble/secp256k1';
@@ -23,7 +24,7 @@ export namespace wormhole {
         ethereumAddress: Uint8Array,
     }
 
-    export const generateGuardianSetKeychain = (count = 19) => {
+    export const generateGuardianSetKeychain = (count = 19): Guardian[] => {
         let keychain = [];
         for (let i = 0; i < count; i++) {
             let secretKey = secp.utils.randomPrivateKey();
@@ -356,4 +357,24 @@ export namespace wormhole {
 
         return Buffer.concat(components);
     }
+
+export function applyGuardianSetUpdate(keychain: wormhole.Guardian[], guardianSetId: number, txSenderAddress: string, contract_name: string) {
+    let guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(keychain, 2, 0, guardianSetId, wormhole.validGuardianRotationModule);
+    let vaaBody = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
+    let vaaHeader = wormhole.buildValidVaaHeader(keychain, vaaBody, { version: 1, guardianSetId: guardianSetId - 1 });
+    let vaa = wormhole.serializeVaa(vaaHeader, vaaBody);
+    let uncompressedPublicKey = [];
+    for (let guardian of keychain) {
+        uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
+    }
+    let result = simnet.mineBlock([
+        tx.callPublicFn(
+            contract_name,
+            `update-guardians-set`,
+            [Cl.buffer(vaa), Cl.list(uncompressedPublicKey)],
+            txSenderAddress
+        ),
+    ])[0].result;
+    return [result, vaaHeader, vaaBody]
+}
 }
