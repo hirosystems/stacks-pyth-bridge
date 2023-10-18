@@ -214,9 +214,13 @@
         u19)))
     (var-set active-guardian-set-id set-id)
     (var-set guardian-set-initialized true)
+    (print { object: "guardian-set", action: "updated", data: { guardians-eth-addresses: eth-addresses, guardians-public-keys: uncompressed-public-keys }})
     (ok {
       vaa: vaa,
-      consolidated-public-keys: consolidated-public-keys,
+      result: { 
+        guardians-eth-addresses: eth-addresses, 
+        guardians-public-keys: uncompressed-public-keys 
+      }
     })))
 
 (define-public (get-active-guardian-set) 
