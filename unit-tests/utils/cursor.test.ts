@@ -8,7 +8,7 @@ const cursor_contract_name = "hk-cursor-v1";
 describe("hiro-kit::cursor - buffers", () => {
     const accounts = simnet.getAccounts();
     const sender = accounts.get("wallet_1")!;
-    
+
     const buff_n = (n: number) => {
         return fc.uint8Array({ minLength: 0, maxLength: n })
     }
@@ -20,6 +20,72 @@ describe("hiro-kit::cursor - buffers", () => {
     const bytesToGenerate = (n: number) => {
         return fc.uint8Array({ minLength: 0, maxLength: n })
     }
+
+    it.prop([buff_n(8192)])("new, no offset", (numbers) => {
+        let res = simnet.callReadOnlyFn(
+            cursor_contract_name,
+            `new`,
+            [Cl.buffer(numbers), Cl.none()],
+            sender
+        );
+        expect(res.result).toBeTuple({
+            "value": Cl.none(),
+            "next": Cl.tuple({
+                bytes: Cl.buffer(numbers),
+                pos: Cl.uint(0)
+            })
+        })
+    })
+
+    it.prop([buff_n(8192), fc.nat()])("new, offset", (numbers, offset) => {
+        let res = simnet.callReadOnlyFn(
+            cursor_contract_name,
+            `new`,
+            [Cl.buffer(numbers), Cl.some(Cl.uint(offset))],
+            sender
+        );
+        expect(res.result).toBeTuple({
+            "value": Cl.none(),
+            "next": Cl.tuple({
+                bytes: Cl.buffer(numbers),
+                pos: Cl.uint(offset)
+            })
+        })
+    })
+
+    it.prop([buff_n(8192), fc.nat()])("advance", (numbers, offset) => {
+        let cursor = Cl.tuple({
+            bytes: Cl.buffer(numbers),
+            pos: Cl.uint(0)
+        })
+        let res = simnet.callReadOnlyFn(
+            cursor_contract_name,
+            `advance`,
+            [cursor, Cl.uint(offset)],
+            sender
+        );
+        expect(res.result).toBeTuple({
+            bytes: Cl.buffer(numbers),
+            pos: Cl.uint(offset)
+        })
+    })
+
+    it.prop([buff_n(8192), fc.nat(2048), fc.nat(2048)])("slice", (bytes, pos, size) => {
+        let cursor = Cl.tuple({
+            bytes: Cl.buffer(bytes),
+            pos: Cl.uint(pos)
+        })
+
+        if (pos + size < bytes.length) {
+            let res = simnet.callReadOnlyFn(
+                cursor_contract_name,
+                `slice`,
+                [cursor, Cl.some(Cl.uint(size))],
+                sender
+            );
+            expect(res.result).toBeBuff(bytes.slice(pos, pos+size))
+        }
+    })
 
     it.prop([buff_n(8192)])("read-buff-1", (numbers) => {
         var data = new Uint8Array();
@@ -110,8 +176,8 @@ describe("hiro-kit::cursor - buffers", () => {
         if (toRead > data.length) {
             expect(res.result).toBeErr(Cl.uint(1))
             return;
-        } 
-        
+        }
+
         let expectedCursor = Cl.tuple({
             bytes: Cl.buffer(data),
             pos: Cl.uint(toRead)
@@ -177,8 +243,8 @@ describe("hiro-kit::cursor - buffers", () => {
         if (toRead > data.length) {
             expect(res.result).toBeErr(Cl.uint(1))
             return;
-        } 
-        
+        }
+
         let expectedCursor = Cl.tuple({
             bytes: Cl.buffer(data),
             pos: Cl.uint(toRead)
@@ -220,7 +286,7 @@ describe("hiro-kit::cursor - buffers", () => {
 describe("hiro-kit::cursor - unsigned integers", () => {
     const accounts = simnet.getAccounts();
     const sender = accounts.get("wallet_1")!;
-   
+
     let arrayOfUint8 = fc.uint8Array({ minLength: 0, maxLength: 8192 });
     it.prop([arrayOfUint8])("read-uint-8", (numbers) => {
         var data = new Uint8Array();
@@ -319,7 +385,7 @@ describe("hiro-kit::cursor - unsigned integers", () => {
     it.prop([arrayOfUint64])("read-uint-64", (numbers) => {
         var data = Buffer.from([]);
         for (let n of numbers) {
-            data =  Buffer.concat([data, Buffer.from(bigintToBuffer(n, 8))]);
+            data = Buffer.concat([data, Buffer.from(bigintToBuffer(n, 8))]);
         }
         let nextInput = Cl.tuple({
             bytes: Cl.buffer(data),
@@ -350,7 +416,7 @@ describe("hiro-kit::cursor - unsigned integers", () => {
     it.prop([arrayOfUint128])("read-uint-128", (numbers) => {
         var data = Buffer.from([]);
         for (let n of numbers) {
-            data =  Buffer.concat([data, Buffer.from(bigintToBuffer(n, 16))]);
+            data = Buffer.concat([data, Buffer.from(bigintToBuffer(n, 16))]);
         }
         let nextInput = Cl.tuple({
             bytes: Cl.buffer(data),
@@ -381,12 +447,12 @@ describe("hiro-kit::cursor - unsigned integers", () => {
 describe("hiro-kit::cursor - signed integers", () => {
     const accounts = simnet.getAccounts();
     const sender = accounts.get("wallet_1")!;
-    
+
     let arrayOfInt8 = fc.array(fc.bigIntN(8), { minLength: 0, maxLength: 1023 });
     it.prop([arrayOfInt8])("read-int-8", (numbers) => {
         var data = Buffer.from([]);
         for (let n of numbers) {
-            data =  Buffer.concat([data, Buffer.from(bigintToBuffer(n, 1))]);
+            data = Buffer.concat([data, Buffer.from(bigintToBuffer(n, 1))]);
         }
         let nextInput = Cl.tuple({
             bytes: Cl.buffer(data),
@@ -417,7 +483,7 @@ describe("hiro-kit::cursor - signed integers", () => {
     it.prop([arrayOfInt16])("read-int-16", (numbers) => {
         var data = Buffer.from([]);
         for (let n of numbers) {
-            data =  Buffer.concat([data, Buffer.from(bigintToBuffer(n, 2))]);
+            data = Buffer.concat([data, Buffer.from(bigintToBuffer(n, 2))]);
         }
         let nextInput = Cl.tuple({
             bytes: Cl.buffer(data),
@@ -448,7 +514,7 @@ describe("hiro-kit::cursor - signed integers", () => {
     it.prop([arrayOfInt32])("read-int-32", (numbers) => {
         var data = Buffer.from([]);
         for (let n of numbers) {
-            data =  Buffer.concat([data, Buffer.from(bigintToBuffer(n, 4))]);
+            data = Buffer.concat([data, Buffer.from(bigintToBuffer(n, 4))]);
         }
         let nextInput = Cl.tuple({
             bytes: Cl.buffer(data),
@@ -479,7 +545,7 @@ describe("hiro-kit::cursor - signed integers", () => {
     it.prop([arrayOfInt64])("read-int-64", (numbers) => {
         var data = Buffer.from([]);
         for (let n of numbers) {
-            data =  Buffer.concat([data, Buffer.from(bigintToBuffer(n, 8))]);
+            data = Buffer.concat([data, Buffer.from(bigintToBuffer(n, 8))]);
         }
         let nextInput = Cl.tuple({
             bytes: Cl.buffer(data),
@@ -510,7 +576,7 @@ describe("hiro-kit::cursor - signed integers", () => {
     it.prop([arrayOfInt128])("read-int-128", (numbers) => {
         var data = Buffer.from([]);
         for (let n of numbers) {
-            data =  Buffer.concat([data, Buffer.from(bigintToBuffer(n, 16))]);
+            data = Buffer.concat([data, Buffer.from(bigintToBuffer(n, 16))]);
         }
         let nextInput = Cl.tuple({
             bytes: Cl.buffer(data),
