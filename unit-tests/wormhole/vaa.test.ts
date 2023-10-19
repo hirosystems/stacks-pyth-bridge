@@ -1,8 +1,8 @@
-import { Cl } from "@stacks/transactions";
-import { expect, describe, it as vit, beforeEach } from "vitest";
+import { Cl, ClarityType } from "@stacks/transactions";
+import { expect, describe, beforeEach } from "vitest";
 import { it, fc } from '@fast-check/vitest';
 import { wormhole } from './helper';
-import { tx } from "@hirosystems/clarinet-sdk";
+import { ParsedTransactionResult, tx } from "@hirosystems/clarinet-sdk";
 
 const contractName = "wormhole-core-v1";
 const verbosity = 0;
@@ -394,3 +394,21 @@ describe("wormhole-core-v1::parse-and-verify-vaa failures", () => {
         expect(res.result).toBeErr(Cl.uint(1102));
     });
 })
+
+describe("wormhole-core-v1::update-guardians-set mainnet guardian rotations", () => {
+    const accounts = simnet.getAccounts();
+    const sender = accounts.get("wallet_1")!;
+    let block: ParsedTransactionResult[] | undefined = undefined;
+
+    // Before starting the test suite, we have to setup the guardian set.
+    beforeEach(async () => {
+        block = wormhole.applyMainnetGuardianSetUpdates(sender, contractName)
+    })
+
+    it("should succeed handling the 3 guardians rotations", () => {
+        expect(block!).toHaveLength(3);
+        block!.forEach((b: ParsedTransactionResult) => {
+            expect(b.result).toHaveClarityType(ClarityType.ResponseOk);
+        });
+    });
+});

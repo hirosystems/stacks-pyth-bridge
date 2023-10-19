@@ -12,6 +12,8 @@ if (!globalThis.crypto) globalThis.crypto = webcrypto;
 
 import { hmac } from '@noble/hashes/hmac';
 import { sha256 } from '@noble/hashes/sha256';
+import { gsuMainnetVaas } from './fixtures';
+
 secp.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp.etc.concatBytes(...m))
 
 export namespace wormhole {
@@ -280,7 +282,6 @@ export namespace wormhole {
     }
 
     export const serializeVaa = (vaaHeader: VaaHeader, vaaBody: VaaBody) => {
-
         return Buffer.concat([serializeVaaHeader(vaaHeader), serializeVaaBody(vaaBody)]);
     }
 
@@ -358,23 +359,56 @@ export namespace wormhole {
         return Buffer.concat(components);
     }
 
-export function applyGuardianSetUpdate(keychain: wormhole.Guardian[], guardianSetId: number, txSenderAddress: string, contract_name: string) {
-    let guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(keychain, 2, 0, guardianSetId, wormhole.validGuardianRotationModule);
-    let vaaBody = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
-    let vaaHeader = wormhole.buildValidVaaHeader(keychain, vaaBody, { version: 1, guardianSetId: guardianSetId - 1 });
-    let vaa = wormhole.serializeVaa(vaaHeader, vaaBody);
-    let uncompressedPublicKey = [];
-    for (let guardian of keychain) {
-        uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
+    export function applyGuardianSetUpdate(keychain: wormhole.Guardian[], guardianSetId: number, txSenderAddress: string, contract_name: string) {
+        let guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(keychain, 2, 0, guardianSetId, wormhole.validGuardianRotationModule);
+        let vaaBody = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
+        let vaaHeader = wormhole.buildValidVaaHeader(keychain, vaaBody, { version: 1, guardianSetId: guardianSetId - 1 });
+        let vaa = wormhole.serializeVaa(vaaHeader, vaaBody);
+        let uncompressedPublicKey = [];
+        for (let guardian of keychain) {
+            uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
+        }
+        let result = simnet.mineBlock([
+            tx.callPublicFn(
+                contract_name,
+                `update-guardians-set`,
+                [Cl.buffer(vaa), Cl.list(uncompressedPublicKey)],
+                txSenderAddress
+            ),
+        ])[0].result;
+        return [result, vaaHeader, vaaBody]
     }
-    let result = simnet.mineBlock([
-        tx.callPublicFn(
-            contract_name,
-            `update-guardians-set`,
-            [Cl.buffer(vaa), Cl.list(uncompressedPublicKey)],
-            txSenderAddress
-        ),
-    ])[0].result;
-    return [result, vaaHeader, vaaBody]
-}
+
+    export function applyMainnetGuardianSetUpdates(txSenderAddress: string, contractName: string) {
+        const vaaRotation1 = Cl.bufferFromHex(gsuMainnetVaas[0].vaa);
+        let publicKeysRotation1 = gsuMainnetVaas[0].keys.map(Cl.bufferFromHex);
+
+        const vaaRotation2 = Cl.bufferFromHex(gsuMainnetVaas[1].vaa);
+        let publicKeysRotation2 = gsuMainnetVaas[1].keys.map(Cl.bufferFromHex);
+
+        const vaaRotation3 = Cl.bufferFromHex(gsuMainnetVaas[2].vaa);
+        let publicKeysRotation3 = gsuMainnetVaas[2].keys.map(Cl.bufferFromHex);
+
+        const block = simnet.mineBlock([
+            tx.callPublicFn(
+                contractName,
+                "update-guardians-set",
+                [vaaRotation1, Cl.list(publicKeysRotation1)],
+                txSenderAddress
+            ),
+            tx.callPublicFn(
+                contractName,
+                "update-guardians-set",
+                [vaaRotation2, Cl.list(publicKeysRotation2)],
+                txSenderAddress
+            ),
+            tx.callPublicFn(
+                contractName,
+                "update-guardians-set",
+                [vaaRotation3, Cl.list(publicKeysRotation3)],
+                txSenderAddress
+            ),
+        ]);
+        return block;
+    }
 }
