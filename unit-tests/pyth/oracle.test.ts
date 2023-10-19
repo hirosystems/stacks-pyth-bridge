@@ -1,6 +1,6 @@
 import { Cl, ClarityType } from "@stacks/transactions";
 import { beforeEach, describe, expect, it } from "vitest";
-import { ParsedTransactionResult, tx } from "@hirosystems/clarinet-sdk";
+import { ParsedTransactionResult } from "@hirosystems/clarinet-sdk";
 import { apnuMainnetVaas } from "./fixtures";
 import { wormhole } from "../wormhole/helpers";
 
