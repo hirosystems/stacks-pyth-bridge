@@ -40,7 +40,7 @@
       ema-conf: uint,
       publish-time: uint,
       prev-publish-time: uint,
-    }) (response uint uint))
+    }) (response bool uint))
 
     (write-batch ((list 64 {
       price-identifier: (buff 32),

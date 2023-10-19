@@ -29,20 +29,47 @@ describe("pyth-oracle-v1::decode-and-verify-price-feeds mainnet VAAs", () => {
 
     it("should succeed handling PNAU mainnet payloads", () => {
         const vaaBytes = Cl.bufferFromHex(apnuMainnetVaas[0]);
-        const executionPlan = Cl.tuple({
-          'pyth-storage-contract': Cl.contractPrincipal(simnet.deployer, pythStorageContractName),
-          'pyth-decoder-contract': Cl.contractPrincipal(simnet.deployer, pythDecoderPnauContractName),
-          'wormhole-core-contract': Cl.contractPrincipal(simnet.deployer, wormholeCoreContractName),
-        });
-        
+        let priceIdentifier = Cl.bufferFromHex('ec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17');
+        let priceUpdated = Cl.tuple({
+            "price-identifier": priceIdentifier,
+            "conf": Cl.uint(37359),
+            "ema-conf": Cl.uint(36191),
+            "ema-price": Cl.int(46167004),
+            "expo": Cl.int(-8),
+            "prev-publish-time": Cl.uint(1695751648),
+            "price": Cl.int(46098556),
+            "publish-time": Cl.uint(1695751649)
+        })
+        let executionPlan = Cl.tuple({
+            'pyth-storage-contract': Cl.contractPrincipal(simnet.deployer, pythStorageContractName),
+            'pyth-decoder-contract': Cl.contractPrincipal(simnet.deployer, pythDecoderPnauContractName),
+            'wormhole-core-contract': Cl.contractPrincipal(simnet.deployer, wormholeCoreContractName),
+        });  
+  
         let res = simnet.callPublicFn(
             pythOracleContractName,
           "verify-and-update-price-feeds",
           [vaaBytes, executionPlan],
           sender
-        );
-    
-        const result = res.result;
-        console.log(Cl.prettyPrint(result, 2));
+        ).result;
+        expect(res).toBeOk(
+            Cl.list([priceUpdated])
+        )
+
+        res = simnet.callPublicFn(
+            pythOracleContractName,
+            "read-price-feed",
+            [priceIdentifier, Cl.contractPrincipal(simnet.deployer, pythStorageContractName)],
+            sender
+        ).result;
+        expect(res).toBeOk(Cl.tuple({
+            "conf": Cl.uint(37359),
+            "ema-conf": Cl.uint(36191),
+            "ema-price": Cl.int(46167004),
+            "expo": Cl.int(-8),
+            "prev-publish-time": Cl.uint(1695751648),
+            "price": Cl.int(46098556),
+            "publish-time": Cl.uint(1695751649)
+        }))
     });
 });

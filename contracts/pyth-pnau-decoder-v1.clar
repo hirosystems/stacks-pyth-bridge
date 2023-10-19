@@ -35,12 +35,14 @@
 (define-constant MERKLE_ROOT_MISMATCH (err u2006))
 ;; Price not found
 (define-constant ERR_NOT_FOUND (err u0))
+;; Price not found
+(define-constant ERR_UNAUTHORIZED_FLOW (err u2404))
 
 ;;;; Public functions
 (define-public (decode-and-verify-price-feeds (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
   (begin
-    ;; Ensure that updates are always coming from the proxy contract 
-    (asserts! (is-eq contract-caller .pyth-proxy-v1) (err u1))
+    ;; Ensure that updates are always coming from the oracle contract
+    (asserts! (is-eq contract-caller .pyth-oracle-v1) ERR_UNAUTHORIZED_FLOW)
     ;; Proceed to update
     (let ((prices-updates (try! (decode-pnau-price-update pnau-bytes wormhole-core-address))))
       (ok prices-updates))))

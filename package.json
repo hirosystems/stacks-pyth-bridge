@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:watch": "chokidar \"tests/**/*.ts\" \"contracts/**/*.clar\" -c \"npm run test:coverage\"",
     "test:coverage": "vitest run -- --coverage true"
   },
   "author": "",
@@ -23,6 +24,8 @@
   },
   "devDependencies": {
     "@fast-check/vitest": "^0.0.8",
+    "@vitest/ui": "^0.34.6",
+    "chokidar-cli": "^3.0.0",
     "fast-check": "^3.13.1"
   }
 }
