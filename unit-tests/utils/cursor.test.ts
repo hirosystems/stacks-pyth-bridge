@@ -1,7 +1,7 @@
 import { Cl } from "@stacks/transactions";
 import { describe, expect } from "vitest";
 import { it, fc } from '@fast-check/vitest';
-import { concatTypedArrays, uint8toBytes, uint16toBytes, uint32toBytes, bigintToBuffer } from './helper';
+import { concatTypedArrays, uint8toBytes, uint16toBytes, uint32toBytes, bigintToBuffer } from './helpers';
 
 const cursor_contract_name = "hk-cursor-v1";
 

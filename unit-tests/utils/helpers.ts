@@ -5,19 +5,19 @@ export function concatTypedArrays(a: any, b: any) {
     return c;
 }
 
-export const uint8toBytes = (num: number) => {
+export function uint8toBytes(num: number) {
     let b = new ArrayBuffer(1);
     new DataView(b).setUint8(0, num);
     return new Uint8Array(b);
 }
 
-export const uint16toBytes = (num: number) => {
+export function uint16toBytes(num: number) {
     let b = new ArrayBuffer(2);
     new DataView(b).setUint16(0, num);
     return new Uint8Array(b);
 }
 
-export const uint32toBytes = (num: number) => {
+export function uint32toBytes(num: number) {
     let b = new ArrayBuffer(4);
     new DataView(b).setUint32(0, num);
     return new Uint8Array(b);
@@ -40,4 +40,15 @@ export function bigintToBuffer(bigintValue: bigint, byteLength: number) {
         const twosComplement = (BigInt(1) << BigInt(byteLength * 8)) + bigintValue;
         return bigintToBuffer(twosComplement, byteLength);
     }
+}
+
+export function bufferToHexString(bytes: Uint8Array) {
+    return Array.from(bytes, function(byte) {
+        return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+    }).join('');
+}
+
+export function bufferToBigint(bytes: Uint8Array) {
+    const hexString = bufferToHexString(bytes);
+    return BigInt('0x' + hexString);
 }

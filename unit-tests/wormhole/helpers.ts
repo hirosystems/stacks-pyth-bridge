@@ -1,7 +1,7 @@
 import { fc } from '@fast-check/vitest';
 import { tx } from "@hirosystems/clarinet-sdk";
 import { Cl, ClarityValue } from "@stacks/transactions";
-import { bigintToBuffer } from '../utils/helper';
+import { bigintToBuffer } from '../utils/helpers';
 import * as secp from '@noble/secp256k1';
 import {
     keccak_256
@@ -172,7 +172,7 @@ export namespace wormhole {
     export const buildValidVaaHeaderSpecs = (keychain: Guardian[], body: VaaBody, opts?: VaaHeaderBuildOptions): VaaHeaderBuildOptions => {
 
         let signatures = [];
-        const messageHash = keccak_256(keccak_256(serializeVaaBody(body)));
+        const messageHash = keccak_256(keccak_256(serializeVaaBodyToBuffer(body)));
 
         for (let guardian of keychain) {
             const signature = secp.sign(messageHash, guardian.secretKey)
@@ -207,7 +207,7 @@ export namespace wormhole {
         }
     }
 
-    export const expectedDecodedVaa = (header: VaaHeader, body: VaaBody, keychain: Guardian[]): [ClarityValue, any[]] => {
+    export const serializeVaaToClarityValue = (header: VaaHeader, body: VaaBody, keychain: Guardian[]): [ClarityValue, any[]] => {
         let guardiansPublicKeys = [];
         let guardiansSignatures = [];
         for (let i = 0; i < header.signatures.length; i++) {
@@ -281,11 +281,11 @@ export namespace wormhole {
         }
     }
 
-    export const serializeVaa = (vaaHeader: VaaHeader, vaaBody: VaaBody) => {
-        return Buffer.concat([serializeVaaHeader(vaaHeader), serializeVaaBody(vaaBody)]);
+    export const serializeVaaToBuffer = (vaaHeader: VaaHeader, vaaBody: VaaBody) => {
+        return Buffer.concat([serializeVaaHeaderToBuffer(vaaHeader), serializeVaaBodyToBuffer(vaaBody)]);
     }
 
-    export const serializeVaaHeader = (vaaHeader: VaaHeader) => {
+    export const serializeVaaHeaderToBuffer = (vaaHeader: VaaHeader) => {
         const components = [];
         var v = Buffer.alloc(1);
         v.writeUint8(vaaHeader.version, 0);
@@ -303,7 +303,7 @@ export namespace wormhole {
         return Buffer.concat(components);
     }
 
-    export const serializeVaaBody = (vaaBody: VaaBody) => {
+    export const serializeVaaBodyToBuffer = (vaaBody: VaaBody) => {
         const components = [];
         let v = Buffer.alloc(4);
         v.writeUInt32BE(vaaBody.timestamp, 0);
@@ -332,7 +332,7 @@ export namespace wormhole {
 
     export const validGuardianRotationModule = Buffer.from('00000000000000000000000000000000000000000000000000000000436f7265', 'hex');
 
-    export const buildGuardianRotationVaaPayload = (keyChain: Guardian[], action: number, chain: number, setId: number, module = validGuardianRotationModule) => {
+    export const serializeGuardianUpdateVaaPayloadToBuffer = (keyChain: Guardian[], action: number, chain: number, setId: number, module = validGuardianRotationModule) => {
         const components = [];
         components.push(module);
 
@@ -360,10 +360,10 @@ export namespace wormhole {
     }
 
     export function applyGuardianSetUpdate(keychain: wormhole.Guardian[], guardianSetId: number, txSenderAddress: string, contract_name: string) {
-        let guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(keychain, 2, 0, guardianSetId, wormhole.validGuardianRotationModule);
+        let guardianRotationPayload = wormhole.serializeGuardianUpdateVaaPayloadToBuffer(keychain, 2, 0, guardianSetId, wormhole.validGuardianRotationModule);
         let vaaBody = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
         let vaaHeader = wormhole.buildValidVaaHeader(keychain, vaaBody, { version: 1, guardianSetId: guardianSetId - 1 });
-        let vaa = wormhole.serializeVaa(vaaHeader, vaaBody);
+        let vaa = wormhole.serializeVaaToBuffer(vaaHeader, vaaBody);
         let uncompressedPublicKey = [];
         for (let guardian of keychain) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));

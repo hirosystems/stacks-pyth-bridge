@@ -2,7 +2,7 @@ import { Cl, ClarityType } from "@stacks/transactions";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ParsedTransactionResult, tx } from "@hirosystems/clarinet-sdk";
 import { apnuMainnetVaas } from "./fixtures";
-import { wormhole } from "../wormhole/helper";
+import { wormhole } from "../wormhole/helpers";
 
 const pythOracleContractName = "pyth-oracle-v1";
 const pythDecoderPnauContractName = "pyth-pnau-decoder-v1";

@@ -52,7 +52,6 @@
       publish-time: uint,
       prev-publish-time: uint,
     })) (response uint uint))
-
   )
 )
 

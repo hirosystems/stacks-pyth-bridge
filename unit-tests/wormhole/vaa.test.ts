@@ -1,7 +1,7 @@
 import { Cl, ClarityType } from "@stacks/transactions";
 import { expect, describe, beforeEach } from "vitest";
 import { it, fc } from '@fast-check/vitest';
-import { wormhole } from './helper';
+import { wormhole } from './helpers';
 import { ParsedTransactionResult, tx } from "@hirosystems/clarinet-sdk";
 
 const contractName = "wormhole-core-v1";
@@ -19,8 +19,8 @@ describe("wormhole-core-v1::parse-vaa success", () => {
         fc.assert(fc.property(wormhole.fc_ext.vaaHeader(headerSpecs, 19), ([version, guardianSetIndex, providedSignatures, generatedSignatures]) => {
             let consolidatedSignatures = [...(providedSignatures as Uint8Array[]), ...(generatedSignatures as Uint8Array[])];
             let header = wormhole.assembleVaaHeader(version, guardianSetIndex, consolidatedSignatures)
-            let vaa = wormhole.serializeVaa(header, body);
-            let [decodedVaa, guardiansPublicKeys] = wormhole.expectedDecodedVaa(header, body, keychain);
+            let vaa = wormhole.serializeVaaToBuffer(header, body);
+            let [decodedVaa, guardiansPublicKeys] = wormhole.serializeVaaToClarityValue(header, body, keychain);
 
             const res = simnet.callReadOnlyFn(
                 contractName,
@@ -45,10 +45,10 @@ describe("wormhole-core-v1::update-guardians-set failures", () => {
 
     it("should fail if the chain is invalid", () => {
         // Before performing this test, we need to setup the guardian set
-        let guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(keychain, 2, 1, 1, wormhole.validGuardianRotationModule);
+        let guardianRotationPayload = wormhole.serializeGuardianUpdateVaaPayloadToBuffer(keychain, 2, 1, 1, wormhole.validGuardianRotationModule);
         let body = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
         let header = wormhole.buildValidVaaHeader(keychain, body, { version: 1, guardianSetId: 0, signatures: [] });
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of keychain) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -64,10 +64,10 @@ describe("wormhole-core-v1::update-guardians-set failures", () => {
 
     it("should fail if the action is invalid", () => {
         // Before performing this test, we need to setup the guardian set
-        let guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(keychain, 0, 0, 1, wormhole.validGuardianRotationModule);
+        let guardianRotationPayload = wormhole.serializeGuardianUpdateVaaPayloadToBuffer(keychain, 0, 0, 1, wormhole.validGuardianRotationModule);
         let body = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
         let header = wormhole.buildValidVaaHeader(keychain, body, { version: 1, guardianSetId: 0, signatures: [] });
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of keychain) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -83,10 +83,10 @@ describe("wormhole-core-v1::update-guardians-set failures", () => {
 
     it("should fail if the set id is invalid", () => {
         // Before performing this test, we need to setup the guardian set
-        let guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(keychain, 2, 0, 0, wormhole.validGuardianRotationModule);
+        let guardianRotationPayload = wormhole.serializeGuardianUpdateVaaPayloadToBuffer(keychain, 2, 0, 0, wormhole.validGuardianRotationModule);
         let body = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
         let header = wormhole.buildValidVaaHeader(keychain, body, { version: 1, guardianSetId: 0, signatures: [] });
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of keychain) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -102,10 +102,10 @@ describe("wormhole-core-v1::update-guardians-set failures", () => {
 
     it("should fail if the module is invalid", () => {
         // Before performing this test, we need to setup the guardian set
-        let guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(keychain, 2, 0, 1, Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex'));
+        let guardianRotationPayload = wormhole.serializeGuardianUpdateVaaPayloadToBuffer(keychain, 2, 0, 1, Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex'));
         let body = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
         let header = wormhole.buildValidVaaHeader(keychain, body, { version: 1, guardianSetId: 0, signatures: [] });
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of keychain) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -130,7 +130,7 @@ describe("wormhole-core-v1::update-guardians-set success", () => {
     // Before starting the test suite, we have to setup the guardian set.
     beforeEach(async () => {
         let [result, vaaHeader, vaaBody] = wormhole.applyGuardianSetUpdate(guardianSet1Keys, 1, sender, contractName)
-        let [expectedDecodedVaa, _] = wormhole.expectedDecodedVaa(
+        let [serializeVaaToClarityValue, _] = wormhole.serializeVaaToClarityValue(
             vaaHeader as wormhole.VaaHeader,
             vaaBody as wormhole.VaaBody,
             guardianSet1Keys);
@@ -148,7 +148,7 @@ describe("wormhole-core-v1::update-guardians-set success", () => {
                 'guardians-eth-addresses': Cl.list(guardianSet1Keys.map((g) => Cl.buffer(g.ethereumAddress))),
                 'guardians-public-keys': Cl.list(guardianSet1Keys.map((g) => Cl.buffer(g.uncompressedPublicKey))),
             }),
-            'vaa': expectedDecodedVaa
+            'vaa': serializeVaaToClarityValue
         }));
     })
 
@@ -171,15 +171,15 @@ describe("wormhole-core-v1::update-guardians-set success", () => {
             })))
         });
         // Before performing this test, we need to setup the guardian set
-        const guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(guardianSet2Keys, 2, 0, 2, wormhole.validGuardianRotationModule);
+        const guardianRotationPayload = wormhole.serializeGuardianUpdateVaaPayloadToBuffer(guardianSet2Keys, 2, 0, 2, wormhole.validGuardianRotationModule);
         const body = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
         const header = wormhole.buildValidVaaHeader(guardianSet1Keys, body, { version: 1, guardianSetId: 1 });
-        const vaa = wormhole.serializeVaa(header, body);
+        const vaa = wormhole.serializeVaaToBuffer(header, body);
         const uncompressedPublicKey = [];
         for (let guardian of guardianSet2Keys) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
         }
-        const [expectedDecodedVaa, _] = wormhole.expectedDecodedVaa(header, body, guardianSet1Keys);
+        const [serializeVaaToClarityValue, _] = wormhole.serializeVaaToClarityValue(header, body, guardianSet1Keys);
         let res = simnet.mineBlock([
             tx.callPublicFn(
                 contractName,
@@ -193,7 +193,7 @@ describe("wormhole-core-v1::update-guardians-set success", () => {
                 'guardians-eth-addresses': Cl.list(guardianSet2Keys.map((g) => Cl.buffer(g.ethereumAddress))),
                 'guardians-public-keys': Cl.list(guardianSet2Keys.map((g) => Cl.buffer(g.uncompressedPublicKey))),
             }),
-            'vaa': expectedDecodedVaa
+            'vaa': serializeVaaToClarityValue
         }));
 
         res = simnet.callPublicFn(
@@ -208,10 +208,10 @@ describe("wormhole-core-v1::update-guardians-set success", () => {
     it("should reject subsequent update if there is a eth address / uncompressed public keys mismatch", () => {
         let guardianSet2KeysSubset = guardianSet2Keys.splice(0, 12);
         // Before performing this test, we need to setup the guardian set
-        const guardianRotationPayload = wormhole.buildGuardianRotationVaaPayload(guardianSet2KeysSubset, 2, 0, 2, wormhole.validGuardianRotationModule);
+        const guardianRotationPayload = wormhole.serializeGuardianUpdateVaaPayloadToBuffer(guardianSet2KeysSubset, 2, 0, 2, wormhole.validGuardianRotationModule);
         const body = wormhole.buildValidVaaBodySpecs({ payload: guardianRotationPayload });
         const header = wormhole.buildValidVaaHeader(guardianSet1Keys, body, { version: 1, guardianSetId: 1 });
-        const vaa = wormhole.serializeVaa(header, body);
+        const vaa = wormhole.serializeVaaToBuffer(header, body);
         const uncompressedPublicKey = [];
         for (let guardian of guardianSet2Keys) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -246,8 +246,8 @@ describe("wormhole-core-v1::parse-and-verify-vaa success", () => {
         fc.assert(fc.property(wormhole.fc_ext.vaaHeader(headerSpecs, 19), ([version, guardianSetIndex, providedSignatures, generatedSignatures]) => {
             let consolidatedSignatures = [...(providedSignatures as Uint8Array[]), ...(generatedSignatures as Uint8Array[])];
             let header = wormhole.assembleVaaHeader(version, guardianSetIndex, consolidatedSignatures)
-            let vaa = wormhole.serializeVaa(header, body);
-            let [decodedVaa, guardiansPublicKeys] = wormhole.expectedDecodedVaa(header, body, guardianSet1Keys);
+            let vaa = wormhole.serializeVaaToBuffer(header, body);
+            let [decodedVaa, guardiansPublicKeys] = wormhole.serializeVaaToClarityValue(header, body, guardianSet1Keys);
 
             const res = simnet.callReadOnlyFn(
                 contractName,
@@ -270,8 +270,8 @@ describe("wormhole-core-v1::parse-and-verify-vaa success", () => {
         let guardianSet1KeysSubset = guardianSet1Keys.splice(0, cutoff);
         let body = wormhole.buildValidVaaBodySpecs();
         let header = wormhole.buildValidVaaHeader(guardianSet1KeysSubset, body, { version: 1, guardianSetId: 1 });
-        let vaa = wormhole.serializeVaa(header, body);
-        let [decodedVaa, _] = wormhole.expectedDecodedVaa(header, body, guardianSet1KeysSubset);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
+        let [decodedVaa, _] = wormhole.serializeVaaToClarityValue(header, body, guardianSet1KeysSubset);
 
         const res = simnet.callReadOnlyFn(
             contractName,
@@ -297,7 +297,7 @@ describe("wormhole-core-v1::parse-and-verify-vaa failures", () => {
         // Before performing this test, we need to setup the guardian set
         let body = wormhole.buildValidVaaBodySpecs();
         let header = wormhole.buildValidVaaHeader(guardianSet1Keys, body, { version: 2, guardianSetId: 1 });
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of guardianSet1Keys) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -315,7 +315,7 @@ describe("wormhole-core-v1::parse-and-verify-vaa failures", () => {
         // Before performing this test, we need to setup the guardian set
         let body = wormhole.buildValidVaaBodySpecs();
         let header = wormhole.buildValidVaaHeader(guardianSet1Keys, body, { version: 1, guardianSetId: 2 });
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of guardianSet1Keys) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -337,7 +337,7 @@ describe("wormhole-core-v1::parse-and-verify-vaa failures", () => {
         for (let i = 0; i < header.signatures.length; i++) {
             header.signatures[i] = header.signatures[0];
         }
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of guardianSet1Keys) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -357,7 +357,7 @@ describe("wormhole-core-v1::parse-and-verify-vaa failures", () => {
         let header = wormhole.buildValidVaaHeader(guardianSet1Keys, body, { version: 1, guardianSetId: 1 });
         // Override signatures
         header.signatures = header.signatures.slice(0, 12);
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of guardianSet1Keys) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));
@@ -380,7 +380,7 @@ describe("wormhole-core-v1::parse-and-verify-vaa failures", () => {
         for (let i = cutoff; i < header.signatures.length; i++) {
             header.signatures[i] = header.signatures[0];
         }
-        let vaa = wormhole.serializeVaa(header, body);
+        let vaa = wormhole.serializeVaaToBuffer(header, body);
         let uncompressedPublicKey = [];
         for (let guardian of guardianSet1Keys) {
             uncompressedPublicKey.push(Cl.buffer(guardian.uncompressedPublicKey));

@@ -60,8 +60,6 @@
             (contract-call? .hk-cursor-v1 slice (get next cursor-pnau-vaa) none)
             (get merkle-root-hash (get value cursor-merkle-root-data)))))
           (prices-updates (map cast-decoded-price decoded-prices-updates)))
-          ;; (watched-prices-feeds (var-get watched-price-feeds))
-          ;; (updated-prices-feeds (get updated-prices-feeds (fold process-prices-attestations-batch decoded-prices-attestations-batches { input: watched-prices-feeds, updated-prices-feeds: (list) }))))
       (ok prices-updates)))
 
 (define-private (parse-merkle-root-data-from-vaa-payload (payload-vaa-bytes (buff 8192)))
