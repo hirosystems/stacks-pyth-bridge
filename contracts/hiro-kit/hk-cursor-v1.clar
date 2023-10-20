@@ -125,9 +125,9 @@
      { bytes: (get bytes cursor), pos: (+ (get pos cursor) offset) })
 
 (define-read-only (slice (cursor { bytes: (buff 8192), pos: uint }) (size (optional uint)))
-    (unwrap-panic (slice? 
-        (get bytes cursor) 
-        (get pos cursor) 
-        (match size value 
-          (+ (get pos cursor) value)    
-            (len (get bytes cursor))))))
+    (match (slice? (get bytes cursor) 
+                   (get pos cursor) 
+                   (match size value 
+                   (+ (get pos cursor) value)    
+                      (len (get bytes cursor))))
+        bytes bytes 0x))
