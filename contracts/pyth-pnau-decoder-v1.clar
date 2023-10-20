@@ -49,7 +49,7 @@
 ;;;; Private functions
 ;; Note: wormhole-core-address is checked upstream so we will ignore the following warning
 ;; #[filter(pnau-bytes, wormhole-core-address)]
-(define-public (decode-pnau-price-update (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
+(define-private (decode-pnau-price-update (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
     (let ((cursor-pnau-header (try! (parse-pnau-header pnau-bytes)))
           (cursor-pnau-vaa-size (try! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-pnau-header))))
           (cursor-pnau-vaa (try! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-pnau-vaa-size) (some (get value cursor-pnau-vaa-size)))))
@@ -86,7 +86,7 @@
       next: (get next cursor-merkle-root-hash)
     })))
 
-(define-read-only (parse-pnau-header (pf-bytes (buff 8192)))
+(define-private (parse-pnau-header (pf-bytes (buff 8192)))
   (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: pf-bytes, pos: u0 }) 
           ERR_MAGIC_BYTES))
         (cursor-version-maj (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-magic)) 
@@ -118,7 +118,7 @@
       next: (get next cursor-proof-type)
     })))
 
-(define-read-only (parse-and-verify-prices-updates (bytes (buff 8192)) (merkle-root-hash (buff 20)))
+(define-private (parse-and-verify-prices-updates (bytes (buff 8192)) (merkle-root-hash (buff 20)))
   (let ((cursor-num-updates (try! (contract-call? .hk-cursor-v1 read-uint-8 { bytes: bytes, pos: u0 })))
         (cursor-updates-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-num-updates) none))
         (updates (get result (fold parse-price-info-and-proof cursor-updates-bytes { 
