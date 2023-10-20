@@ -12,7 +12,6 @@
 ;; Price Feeds Ids (https://pyth.network/developers/price-feed-ids#pyth-evm-mainnet)
 (define-constant STX_USD 0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17)
 (define-constant BTC_USD 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43)
-(define-constant ETH_USD 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace)
 
 (define-constant PNAU_MAGIC 0x504e4155) ;; 'PNAU': Pyth Network Accumulator Update
 (define-constant AUWV_MAGIC 0x41555756) ;; 'AUWV': Accumulator Update Wormhole Verficiation
@@ -76,7 +75,7 @@
     ;; Check payload type
     (asserts! (is-eq (get value cursor-payload-type) AUWV_MAGIC) ERR_MAGIC_BYTES)
     ;; Check update type
-    (asserts! (is-eq (get value cursor-wh-update-type) u0) (err u999))
+    (asserts! (is-eq (get value cursor-wh-update-type) u0) ERR_PROOF_TYPE)
     (ok {
       value: {
         merkle-root-slot: (get value cursor-merkle-root-slot),

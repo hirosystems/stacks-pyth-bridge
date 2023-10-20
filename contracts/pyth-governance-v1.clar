@@ -92,7 +92,7 @@
                 ;; Ensure that wormhole contract is the one expected
                 (try! (expect-active-wormhole-contract (get wormhole-core-contract execution-plan) expected-execution-plan)))
               false)))))
-      (if success (ok true) (err u0))))
+      (if success (ok true) ERR_UNAUTHORIZED_ACCESS)))
 
 (define-read-only (check-storage-contract 
   (storage-contract <pyth-storage-trait>))
@@ -111,7 +111,7 @@
   (begin
     (asserts! 
       (is-eq former-contract-caller (get pyth-oracle-contract expected-plan))
-      (err u0))
+      ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (expect-active-storage-contract 
