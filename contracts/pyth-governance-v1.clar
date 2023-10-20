@@ -12,19 +12,19 @@
 
 ;; VAA including some commands for administrating Pyth contract
 ;; The oracle contract address must be upgraded
-(define-constant GOVERNANCE_UPGRADE_CONTRACT_PYTH_ORACLE 0x00)
+(define-constant PTGM_UPGRADE_CONTRACT_PYTH_ORACLE 0x00)
 ;; Authorize governance change
-(define-constant GOVERNANCE_AUTHORIZE_GOVERNANCE_DATA_SOURCE_TRANSFER 0x01)
+(define-constant PTGM_AUTHORIZE_GOVERNANCE_DATA_SOURCE_TRANSFER 0x01)
 ;; Which wormhole emitter is allowed to send price updates
-(define-constant GOVERNANCE_SET_DATA_SOURCES 0x02)
+(define-constant PTGM_SET_DATA_SOURCES 0x02)
 ;; Fee is charged when you submit a new price
-(define-constant GOVERNANCE_SET_FEE 0x03)
+(define-constant PTGM_SET_FEE 0x03)
 ;; Emit a request for governance change 
-(define-constant GOVERNANCE_REQUEST_GOVERNANCE_DATA_SOURCE_TRANSFER 0x05)
+(define-constant PTGM_REQUEST_GOVERNANCE_DATA_SOURCE_TRANSFER 0x05)
 ;; Wormhole contract 
-(define-constant GOVERNANCE_UPGRADE_CONTRACT_WORMHOLE_CORE 0x06)
+(define-constant PTGM_UPGRADE_CONTRACT_WORMHOLE_CORE 0x06)
 ;; Fee is charged when you submit a new price
-(define-constant GOVERNANCE_SET_RECIPIENT_ADDRESS 0xa0)
+(define-constant PTGM_SET_RECIPIENT_ADDRESS 0xa0)
 ;; Error unauthorized control flow
 (define-constant ERR_UNAUTHORIZED_ACCESS (err u404))
 
@@ -83,8 +83,6 @@
             (if (is-eq contract-caller (get pyth-oracle-contract expected-execution-plan))
               ;; The proxy contract is checking its execution flow
               (let ((execution-plan (unwrap! execution-plan-opt ERR_UNAUTHORIZED_ACCESS)))
-                ;; This contract must always be invoked by the proxy
-                ;; (try! (expect-contract-call-performed-by-expected-oracle-contract former-contract-caller expected-execution-plan))
                 ;; Ensure that storage contract is the one expected
                 (try! (expect-active-storage-contract (get pyth-storage-contract execution-plan) expected-execution-plan))
                 ;; Ensure that decoder contract is the one expected
@@ -175,37 +173,48 @@
     (var-set fee-value fee-value-update)
     (ok fee-value-update)))
 
-(define-public (update-fee-recipient-addess (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+(define-public (update-fee-recipient-address (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
   (let ((expected-execution-plan (get-current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
-        (fee-recipient-address-update (try! (parse-and-verify-fee-recipient-address (get payload vaa)))))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa)))))
+    ;; Ensure that the lastest wormhole contract is used
+    (asserts! (is-eq (get action ptgm) PTGM_SET_RECIPIENT_ADDRESS) (err u1))
     ;; Ensure that the lastest wormhole contract is used
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
-    ;; 
-    (var-set fee-recipient-address fee-recipient-address-update)
-    (ok fee-recipient-address-update)))
+    ;;
+    (let ((updated-address (unwrap! (from-consensus-buff? principal (get body ptgm)) (err u2))))
+      (var-set fee-recipient-address updated-address)
+      (ok updated-address))))
 
 (define-public (update-wormhole-core-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
   (let ((expected-execution-plan (get-current-execution-plan))
         (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
-        (wormhole-core-address (try! (parse-and-verify-wormhole-core-contract (get payload vaa)))))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa)))))
+    ;; Ensure that the lastest wormhole contract is used
+    (asserts! (is-eq (get action ptgm) PTGM_UPGRADE_CONTRACT_WORMHOLE_CORE) (err u1))
     ;; Ensure that the lastest wormhole contract is used
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
-    ;; 
-    (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { wormhole-core-contract: wormhole-core-address }))
-    (ok wormhole-core-address)))
+    ;;
+    (let ((updated-address (unwrap! (from-consensus-buff? principal (get body ptgm)) (err u2))))
+      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { wormhole-core-contract: updated-address }))
+      (var-set current-execution-plan-id next-execution-plan-id)
+      (ok (get-current-execution-plan)))))
 
 (define-public (update-pyth-oracle-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
   (let ((expected-execution-plan (get-current-execution-plan))
         (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
-        (pyth-oracle-address (try! (parse-and-verify-pyth-oracle-contract (get payload vaa)))))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa)))))
+    ;; Ensure that the lastest wormhole contract is used
+    (asserts! (is-eq (get action ptgm) PTGM_UPGRADE_CONTRACT_PYTH_ORACLE) (err u1))
     ;; Ensure that the lastest wormhole contract is used
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
-    ;; 
-    (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-oracle-contract: pyth-oracle-address }))
-    (ok pyth-oracle-address)))
+    ;;
+    (let ((updated-address (unwrap! (from-consensus-buff? principal (get body ptgm)) (err u2))))
+      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-oracle-contract: updated-address }))
+      (var-set current-execution-plan-id next-execution-plan-id)
+      (ok (get-current-execution-plan)))))
 
 (define-public (update-prices-data-sources (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
   (let ((expected-execution-plan (get-current-execution-plan))
@@ -218,8 +227,7 @@
     (map-set prices-data-sources next-prices-data-sources-id prices-data-sources-update)
     (ok prices-data-sources-update)))
 
-
-(define-private (parse-and-verify-governance-instruction (ptgm-bytes (buff 8192)))
+(define-private (parse-and-verify-ptgm (ptgm-bytes (buff 8192)))
     (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: ptgm-bytes, pos: u0 }) 
             (err u0)))
           (cursor-module (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-magic)) 
@@ -227,22 +235,25 @@
           (cursor-action (unwrap! (contract-call? .hk-cursor-v1 read-buff-1 (get next cursor-module)) 
             (err u2)))
           (cursor-target-chain-id (unwrap! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-action)) 
-            (err u3))))
+            (err u3)))
+          (cursor-body (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-target-chain-id) none)
+            (err u4))))
         ;; Check magic bytes
-        (asserts! (is-eq (get value cursor-magic) PTGM_MAGIC) (err u1))
+        (asserts! (is-eq (get value cursor-magic) PTGM_MAGIC) (err u8))
         ;;
         (ok { 
           action: (get value cursor-action), 
           target-chain-id: (get value cursor-target-chain-id), 
           module: (get value cursor-module),
-          cursor: cursor-target-chain-id
+          cursor: cursor-target-chain-id,
+          body: (get value cursor-body)
         })))
 
 (define-private (parse-and-verify-fee-value (fee-value-bytes (buff 8192)))
-  (let ((gi (try! (parse-and-verify-governance-instruction fee-value-bytes))))
-      (asserts! (is-eq (get action gi) GOVERNANCE_SET_FEE) (err u1))
+  (let ((ptgm (try! (parse-and-verify-ptgm fee-value-bytes))))
+      (asserts! (is-eq (get action ptgm) PTGM_SET_FEE) (err u9))
       ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-mantissa (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next (get cursor gi))) 
+      (let ((cursor-mantissa (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next (get cursor ptgm))) 
               (err u100)))
             (cursor-exponent (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-mantissa)) 
               (err u100))))
@@ -251,69 +262,11 @@
       exponent: (get value cursor-exponent) 
     }))))
 
-(define-private (parse-and-verify-fee-recipient-address (fee-recipient-bytes (buff 8192)))
-  (let ((gi (try! (parse-and-verify-governance-instruction fee-recipient-bytes))))
-      (asserts! (is-eq (get action gi) GOVERNANCE_SET_RECIPIENT_ADDRESS) (err u1))
-      ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-version (unwrap! (contract-call? .hk-cursor-v1 read-buff-1 (get next (get cursor gi))) 
-              (err u100)))
-            (cursor-hash-bytes (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-version)) 
-              (err u100)))
-            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-hash-bytes) none)
-              (err u100)))
-            (recipient (unwrap! 
-              (if (is-eq u0 (len (get value cursor-contract-name)))
-                (principal-construct? 
-                  (get value cursor-version) 
-                  (get value cursor-hash-bytes))
-                (principal-construct? 
-                  (get value cursor-version) 
-                  (get value cursor-hash-bytes)
-                  (unwrap! (from-consensus-buff? (string-ascii 40) (get value cursor-contract-name)) (err u100))))
-              (err u100))))
-        (ok recipient))))
-
-(define-private (parse-and-verify-wormhole-core-contract (wormhole-core-contract-bytes (buff 8192)))
-  (let ((gi (try! (parse-and-verify-governance-instruction wormhole-core-contract-bytes))))
-      (asserts! (is-eq (get action gi) GOVERNANCE_UPGRADE_CONTRACT_WORMHOLE_CORE) (err u1))
-      ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-version (unwrap! (contract-call? .hk-cursor-v1 read-buff-1 (get next (get cursor gi))) 
-              (err u100)))
-            (cursor-hash-bytes (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-version)) 
-              (err u100)))
-            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-hash-bytes) none)
-              (err u100)))
-            (wormhole-core-address (unwrap! 
-              (principal-construct? 
-                (get value cursor-version) 
-                (get value cursor-hash-bytes)
-                (unwrap! (from-consensus-buff? (string-ascii 40) (get value cursor-contract-name)) (err u100)))
-              (err u100))))
-        (ok wormhole-core-address))))
-
-(define-private (parse-and-verify-pyth-oracle-contract (pyth-oracle-contract-bytes (buff 8192)))
-  (let ((gi (try! (parse-and-verify-governance-instruction pyth-oracle-contract-bytes))))
-      (asserts! (is-eq (get action gi) GOVERNANCE_UPGRADE_CONTRACT_PYTH_ORACLE) (err u1))
-      ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-version (unwrap! (contract-call? .hk-cursor-v1 read-buff-1 (get next (get cursor gi))) 
-              (err u100)))
-            (cursor-hash-bytes (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-version)) 
-              (err u100)))
-            (cursor-contract-name (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-hash-bytes) none)
-              (err u100)))
-            (pyth-oracle-address (unwrap! 
-              (principal-construct? 
-                (get value cursor-version) 
-                (get value cursor-hash-bytes)
-                (unwrap! (from-consensus-buff? (string-ascii 40) (get value cursor-contract-name)) (err u100)))
-              (err u100))))
-        (ok pyth-oracle-address))))
-
 (define-private (parse-and-verify-prices-data-sources (prices-data-sources-bytes (buff 8192)))
-  (let ((gi (try! (parse-and-verify-governance-instruction prices-data-sources-bytes))))
-      (asserts! (is-eq (get action gi) GOVERNANCE_SET_DATA_SOURCES) (err u1))
+  (let ((ptgm (try! (parse-and-verify-ptgm prices-data-sources-bytes))))
+      (asserts! (is-eq (get action ptgm) PTGM_SET_DATA_SOURCES) (err u1))
       ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-num-data-sources (try! (contract-call? .hk-cursor-v1 read-uint-8 { bytes: prices-data-sources-bytes, pos: u0 })))
+      (let ((cursor-num-data-sources (try! (contract-call? .hk-cursor-v1 read-uint-8 (get next (get cursor ptgm)))))
             (cursor-data-sources-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-num-data-sources) none))
             (data-sources (get result (fold parse-data-sources cursor-data-sources-bytes { 
               result: (list), 
