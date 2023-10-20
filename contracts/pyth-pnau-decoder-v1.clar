@@ -204,7 +204,7 @@
             (cursor-ema-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-ema-price))))
             (cursor-proof (contract-call? .hk-cursor-v1 advance (get next cursor-message-size) (get value cursor-message-size)))
             (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 cursor-proof)))
-            (proof-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-proof-size) none))
+            (proof-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-proof-size) (some (* u20 (get value cursor-proof-size)))))
             (leaf-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-message-size) (some (get value cursor-message-size))))
             (proof (get result (fold parse-proof proof-bytes { 
               result: (list),
@@ -218,7 +218,13 @@
         {
           cursor: { 
             index: (+ (get index (get cursor acc)) u1),
-            next-update-index: (+ (get index (get cursor acc)) (+ (get pos (get next cursor-proof-size)) (get value cursor-proof-size))),
+            next-update-index: 
+              (+
+                (get index (get cursor acc))
+                u2
+                (get value cursor-message-size)
+                u1
+                (* (get value cursor-proof-size) u20)),
           },
           bytes: (get bytes acc),
           result: (unwrap-panic (as-max-len? (append (get result acc) {
