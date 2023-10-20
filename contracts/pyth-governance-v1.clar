@@ -75,11 +75,7 @@
           ;; Other contract
           (if (is-eq contract-caller (get pyth-decoder-contract expected-execution-plan))
             ;; The decoding contract is checking its execution flow
-            (let ((execution-plan (unwrap! execution-plan-opt ERR_UNAUTHORIZED_ACCESS)))
-              ;; Must always be invoked by the proxy
-              (try! (expect-contract-call-performed-by-expected-oracle-contract former-contract-caller expected-execution-plan))
-              ;; Ensure that wormhole contract is the one expected
-              (try! (expect-active-wormhole-contract (get wormhole-core-contract execution-plan) expected-execution-plan)))
+            (try! (expect-contract-call-performed-by-expected-oracle-contract former-contract-caller expected-execution-plan))
             (if (is-eq contract-caller (get pyth-oracle-contract expected-execution-plan))
               ;; The proxy contract is checking its execution flow
               (let ((execution-plan (unwrap! execution-plan-opt ERR_UNAUTHORIZED_ACCESS)))

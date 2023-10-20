@@ -40,8 +40,8 @@
 ;;;; Public functions
 (define-public (decode-and-verify-price-feeds (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
   (begin
-    ;; Ensure that updates are always coming from the oracle contract
-    (asserts! (is-eq contract-caller .pyth-oracle-v1) ERR_UNAUTHORIZED_FLOW)
+    ;; Check execution flow
+    (try! (contract-call? .pyth-governance-v1 check-execution-flow contract-caller none))
     ;; Proceed to update
     (let ((prices-updates (try! (decode-pnau-price-update pnau-bytes wormhole-core-address))))
       (ok prices-updates))))
