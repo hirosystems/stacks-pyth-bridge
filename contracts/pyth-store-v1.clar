@@ -21,22 +21,7 @@
   (let ((entry (unwrap! (map-get? prices price-identifier) (err u404))))
     (ok entry)))
 
-(define-public (write (price-identifier (buff 32)) (data {
-      price: int,
-      conf: uint,
-      expo: int,
-      ema-price: int,
-      ema-conf: uint,
-      publish-time: uint,
-      prev-publish-time: uint,
-    }))
-  (begin
-    ;; Ensure that updates are always coming from the right contract
-    (try! (contract-call? .pyth-governance-v1 check-execution-flow contract-caller none))
-    ;; Update storage
-    (ok (write-update price-identifier data))))
-
-(define-public (write-batch (batch-updates (list 64 {
+(define-public (write (batch-updates (list 64 {
     price-identifier: (buff 32),
     price: int,
     conf: uint,

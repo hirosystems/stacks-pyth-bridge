@@ -42,5 +42,5 @@
       ;; Charge fee
       (unwrap! (stx-transfer? fee-amount tx-sender (get address fee-info)) ERR_BALANCE_INSUFFICIENT)
       ;; Update storage
-      (try! (contract-call? pyth-storage-contract write-batch prices-updates))
+      (try! (contract-call? pyth-storage-contract write prices-updates))
       (ok prices-updates))))
