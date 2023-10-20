@@ -100,25 +100,4 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds success", () => {
 
     expect(res.result).toHaveClarityType(ClarityType.ResponseOk);
   });
-
-  // it("should produced a correct empty vaa", () => {
-  //     let priceUpdateBatch = pyth.buildPriceUpdateBatch([
-  //         [pyth.BtcPriceIdentifier],
-  //         [pyth.StxPriceIdentifier]
-  //     ])
-  //     let payload = pyth.buildPnauVaa(priceUpdateBatch)
-  //     let body = wormhole.buildValidVaaBodySpecs({ payload });
-  //     let header = wormhole.buildValidVaaHeader(guardianSet, body, { version: 1, guardianSetId: 1 });
-  //     let vaa = wormhole.serializeVaaToBuffer(header, body);
-
-  //     let [decodedVaa, _] = wormhole.serializeVaaToClarityValue(header, body, guardianSet);
-
-  //     const res = simnet.callReadOnlyFn(
-  //         wormholeCoreContractName,
-  //         `parse-and-verify-vaa`,
-  //         [Cl.buffer(vaa)],
-  //         sender
-  //     );
-  //     expect(res.result).toBeOk(decodedVaa)
-  // });
 });
