@@ -26,19 +26,24 @@ Price feeds are available on multiple blockchains and can be used in off-chain a
 
 [Wormhole](https://wormhole.com) is a decentralized attestation engine that leverages its network of guardians to trustlessly bridge information between the chains it supports. Wormhole has a simple, elegant, and pragmatic design that has enabled it to be the first real solution to ship to market and has received wide recognition and support from its member chains.
 
-## Setup and Test a Devnet Bridge
+## Setup and and run the tests
 
-The bridge is being operated through an off-chain service, `stacks-pyth-relayer`, and a set of contracts implementing the core functionalities specified by the Wormhole protocol. 
-
-The contracts are developed in Clarity and use Clarinet for its test harnessing.
-This guide assumes that a recent installation of Clarinet (available on brew and winget) is available locally. 
+The contracts are developed in Clarity and use [clarinet-sdk](https://www.npmjs.com/package/@hirosystems/clarinet-sdk) for its test harnessing.
 
 Git clone and compile **stacks-pyth-relayer**
 
 ```bash
 $ git clone https://github.com/hirosystems/stacks-pyth-bridge.git
 $ cd stacks-pyth-bridge
+$ npm install
+$ npm test
 ```
+
+## Setup and Test a Devnet Bridge
+
+This guide assumes that a recent installation of Clarinet (available on brew and winget) is available locally. 
+
+The bridge can be operated through an off-chain service, `stacks-pyth-relayer`, and a set of contracts implementing the core functionalities specified by the Wormhole protocol. 
 
 Start a local Devnet using the command:
 ```bash
@@ -183,8 +188,6 @@ These events can be observed using [Chainhook](https://github.com/hirosystems/ch
 
 ## Todos:
 
-- [ ] Resolve todos, mostly aiming at adding more checks in both wormhole and pyth contracts
-- [ ] Address insufficient test coverage
-- [ ] Resolve build warnings
-- [ ] Improve documentation
-- [ ] Add example
+- [ ] Resolve remaining todo
+- [ ] Document usage
+- [ ] Document example/cbtc

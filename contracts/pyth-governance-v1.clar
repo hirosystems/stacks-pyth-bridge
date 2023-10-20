@@ -25,6 +25,9 @@
 (define-constant GOVERNANCE_UPGRADE_CONTRACT_WORMHOLE_CORE 0x06)
 ;; Fee is charged when you submit a new price
 (define-constant GOVERNANCE_SET_RECIPIENT_ADDRESS 0xa0)
+;; Error unauthorized control flow
+(define-constant ERR_UNAUTHORIZED_ACCESS (err u404))
+
 
 (define-data-var fee-value 
   { mantissa: uint, exponent: uint } 
@@ -72,16 +75,16 @@
           ;; Other contract
           (if (is-eq contract-caller (get pyth-decoder-contract expected-execution-plan))
             ;; The decoding contract is checking its execution flow
-            (let ((execution-plan (unwrap! execution-plan-opt (err u10))))
+            (let ((execution-plan (unwrap! execution-plan-opt ERR_UNAUTHORIZED_ACCESS)))
               ;; Must always be invoked by the proxy
               (try! (expect-contract-call-performed-by-expected-oracle-contract former-contract-caller expected-execution-plan))
               ;; Ensure that wormhole contract is the one expected
               (try! (expect-active-wormhole-contract (get wormhole-core-contract execution-plan) expected-execution-plan)))
             (if (is-eq contract-caller (get pyth-oracle-contract expected-execution-plan))
               ;; The proxy contract is checking its execution flow
-              (let ((execution-plan (unwrap! execution-plan-opt (err u10))))
+              (let ((execution-plan (unwrap! execution-plan-opt ERR_UNAUTHORIZED_ACCESS)))
                 ;; This contract must always be invoked by the proxy
-                (try! (expect-contract-call-performed-by-expected-oracle-contract former-contract-caller expected-execution-plan))
+                ;; (try! (expect-contract-call-performed-by-expected-oracle-contract former-contract-caller expected-execution-plan))
                 ;; Ensure that storage contract is the one expected
                 (try! (expect-active-storage-contract (get pyth-storage-contract execution-plan) expected-execution-plan))
                 ;; Ensure that decoder contract is the one expected
@@ -89,7 +92,7 @@
                 ;; Ensure that wormhole contract is the one expected
                 (try! (expect-active-wormhole-contract (get wormhole-core-contract execution-plan) expected-execution-plan)))
               false)))))
-      (if success (ok true) (err u0))))
+      (if success (ok true) ERR_UNAUTHORIZED_ACCESS)))
 
 (define-read-only (check-storage-contract 
   (storage-contract <pyth-storage-trait>))
@@ -108,7 +111,7 @@
   (begin
     (asserts! 
       (is-eq former-contract-caller (get pyth-oracle-contract expected-plan))
-      (err u0))
+      ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (expect-active-storage-contract 
@@ -123,7 +126,7 @@
     (asserts! 
       (is-eq 
         (contract-of storage-contract) 
-        (get pyth-storage-contract expected-plan)) (err u1))
+        (get pyth-storage-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (expect-active-decoder-contract 
@@ -138,7 +141,7 @@
     (asserts! 
       (is-eq 
         (contract-of decoder-contract) 
-        (get pyth-decoder-contract expected-plan)) (err u2))
+        (get pyth-decoder-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (expect-active-wormhole-contract 
@@ -153,7 +156,7 @@
     (asserts! 
       (is-eq 
         (contract-of wormhole-contract) 
-        (get wormhole-core-contract expected-plan)) (err u3))
+        (get wormhole-core-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-read-only (get-current-execution-plan)

@@ -12,7 +12,6 @@
 ;; Price Feeds Ids (https://pyth.network/developers/price-feed-ids#pyth-evm-mainnet)
 (define-constant STX_USD 0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17)
 (define-constant BTC_USD 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43)
-(define-constant ETH_USD 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace)
 
 (define-constant PNAU_MAGIC 0x504e4155) ;; 'PNAU': Pyth Network Accumulator Update
 (define-constant AUWV_MAGIC 0x41555756) ;; 'AUWV': Accumulator Update Wormhole Verficiation
@@ -35,12 +34,14 @@
 (define-constant MERKLE_ROOT_MISMATCH (err u2006))
 ;; Price not found
 (define-constant ERR_NOT_FOUND (err u0))
+;; Price not found
+(define-constant ERR_UNAUTHORIZED_FLOW (err u2404))
 
 ;;;; Public functions
 (define-public (decode-and-verify-price-feeds (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
   (begin
-    ;; Ensure that updates are always coming from the proxy contract 
-    (asserts! (is-eq contract-caller .pyth-proxy-v1) (err u1))
+    ;; Ensure that updates are always coming from the oracle contract
+    (asserts! (is-eq contract-caller .pyth-oracle-v1) ERR_UNAUTHORIZED_FLOW)
     ;; Proceed to update
     (let ((prices-updates (try! (decode-pnau-price-update pnau-bytes wormhole-core-address))))
       (ok prices-updates))))
@@ -58,8 +59,6 @@
             (contract-call? .hk-cursor-v1 slice (get next cursor-pnau-vaa) none)
             (get merkle-root-hash (get value cursor-merkle-root-data)))))
           (prices-updates (map cast-decoded-price decoded-prices-updates)))
-          ;; (watched-prices-feeds (var-get watched-price-feeds))
-          ;; (updated-prices-feeds (get updated-prices-feeds (fold process-prices-attestations-batch decoded-prices-attestations-batches { input: watched-prices-feeds, updated-prices-feeds: (list) }))))
       (ok prices-updates)))
 
 (define-private (parse-merkle-root-data-from-vaa-payload (payload-vaa-bytes (buff 8192)))
@@ -76,7 +75,7 @@
     ;; Check payload type
     (asserts! (is-eq (get value cursor-payload-type) AUWV_MAGIC) ERR_MAGIC_BYTES)
     ;; Check update type
-    (asserts! (is-eq (get value cursor-wh-update-type) u0) (err u999))
+    (asserts! (is-eq (get value cursor-wh-update-type) u0) ERR_PROOF_TYPE)
     (ok {
       value: {
         merkle-root-slot: (get value cursor-merkle-root-slot),
@@ -205,7 +204,7 @@
             (cursor-ema-conf (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-ema-price))))
             (cursor-proof (contract-call? .hk-cursor-v1 advance (get next cursor-message-size) (get value cursor-message-size)))
             (cursor-proof-size (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 cursor-proof)))
-            (proof-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-proof-size) none))
+            (proof-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-proof-size) (some (* u20 (get value cursor-proof-size)))))
             (leaf-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-message-size) (some (get value cursor-message-size))))
             (proof (get result (fold parse-proof proof-bytes { 
               result: (list),
@@ -219,7 +218,13 @@
         {
           cursor: { 
             index: (+ (get index (get cursor acc)) u1),
-            next-update-index: (+ (get index (get cursor acc)) (+ (get pos (get next cursor-proof-size)) (get value cursor-proof-size))),
+            next-update-index: 
+              (+
+                (get index (get cursor acc))
+                u2
+                (get value cursor-message-size)
+                u1
+                (* (get value cursor-proof-size) u20)),
           },
           bytes: (get bytes acc),
           result: (unwrap-panic (as-max-len? (append (get result acc) {
