@@ -25,7 +25,6 @@ export namespace pyth {
         expo: number,
         publishTime: bigint,
         prevPublishTime: bigint,
-        proof: Uint8Array,
     }
 
     export interface PriceUpdateBuildOptions {
@@ -73,16 +72,24 @@ export namespace pyth {
     export interface PnauBody {
         vaa: Uint8Array,
         pricesUpdates: PriceUpdateBatch,
+        pricesUpdatesToSubmit: Uint8Array[]
     }
 
     export interface PriceUpdateBatch {
         decoded: PriceUpdate[],
         serialized: Uint8Array[],
         hashed: Uint8Array[],
+        proofs: Uint8Array[][],
     }
 
     export const BtcPriceIdentifier = Buffer.from('e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43', 'hex')
     export const StxPriceIdentifier = Buffer.from('ec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17', 'hex')
+    export const BatPriceIdentifer = Buffer.from('8e860fb74e60e5736b455d82f60b3728049c348e94961add5f961b02fdee2535', 'hex')
+    export const DaiPriceIdentifer = Buffer.from('b0948a5e5313200c632b51bb5ca32f6de0d36e9950a942d19751e833f70dabfd', 'hex')
+    export const UsdcPriceIdentifer = Buffer.from('eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a', 'hex')
+    export const UsdtPriceIdentifer = Buffer.from('2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b', 'hex')
+    export const WbtcPriceIdentifer = Buffer.from('c9d8b075a5c69303365ae23633d4e085199bf5c520a3b90fed1322a0342ffc33', 'hex')
+    export const TbtcPriceIdentifer = Buffer.from('56a3121958b01f99fdc4e1fd01e81050602c7ace3a571918bb55c6a96657cca9', 'hex')
 
     export function serializePriceUpdateToClarityValue(priceUpdate: PriceUpdate): ClarityValue {
         return Cl.tuple({
@@ -99,10 +106,14 @@ export namespace pyth {
 
     export function preserializePriceUpdateToBuffer(priceUpdate: PriceUpdate): Uint8Array {
         const components = [];
+        // Update type
+        var v = Buffer.alloc(1);
+        v.writeUint8(0, 0);
+        components.push(v);
         components.push(priceUpdate.priceIdentifier);
         components.push(bigintToBuffer(priceUpdate.price, 8));
         components.push(bigintToBuffer(priceUpdate.conf, 8));
-        let v = Buffer.alloc(4);
+        v = Buffer.alloc(4);
         v.writeInt32BE(priceUpdate.expo, 0);
         components.push(v);
         components.push(bigintToBuffer(priceUpdate.publishTime, 8));
@@ -112,31 +123,21 @@ export namespace pyth {
         return Buffer.concat(components);
     }
 
-    export function serializePriceUpdateToBuffer(priceUpdate: PriceUpdate, proof: Uint8Array): Uint8Array {
+    export function serializePriceUpdateToBuffer(priceUpdateData: Uint8Array, proof: Uint8Array[]): Uint8Array {
         const components = [];
-        
-        // Update type
-        var v = Buffer.alloc(1);
-        v.writeUint8(1, 0);
-        components.push(v);
-
         // Size
-        let priceUpdateData = preserializePriceUpdateToBuffer(priceUpdate);
         let messageSize = priceUpdateData.length;
         var v = Buffer.alloc(2);
         v.writeUint16BE(messageSize, 0);
         components.push(v);
-
         // Price update data
         components.push(priceUpdateData)
-
         // Proof size
         var v = Buffer.alloc(1);
         v.writeUint8(proof.length, 0);
         components.push(v);
-
         // Proof
-        components.push(proof)
+        components.push(...proof)
         return Buffer.concat(components);
     }
 
@@ -170,11 +171,16 @@ export namespace pyth {
             serialized.push(s)
             hashed.push(keccak160HashLeaf(s))
         }
+        let proofs = [];
+        for (let hash of hashed) {
+            proofs.push(computeMerkleProof(hash, hashed))
+        }
         return {
             decoded,
             serialized,
-            hashed
-        } 
+            hashed,
+            proofs
+        }
     }
 
     export function buildAuwvVaaPayload(batch: PriceUpdateBatch, merkleRootData?: AuwvVaaPayloadBuildOptions) {
@@ -184,10 +190,10 @@ export namespace pyth {
             let newLeaves = [];
             // Loop through adjacent pairs
             for (let i = 0; i < merkleLeaves.length; i += 2) {
-              const leftLeaf = merkleLeaves[i];
-               // Duplicate the last one if odd number of leaves
-              const rightLeaf = merkleLeaves[i + 1] || leftLeaf;        
-              newLeaves.push(keccak160HashNodes(leftLeaf, rightLeaf));
+                const leftLeaf = merkleLeaves[i];
+                // Duplicate the last one if odd number of leaves
+                const rightLeaf = merkleLeaves[i + 1] || leftLeaf;
+                newLeaves.push(keccak160HashNodes(leftLeaf, rightLeaf));
             }
             merkleLeaves = newLeaves;
         }
@@ -208,29 +214,6 @@ export namespace pyth {
             versionMin: opts?.versionMin || 0,
             trailingSize: opts?.trailingSize || 0,
             proofType: opts?.proofType || 0,
-        }
-    }
-
-    export function buildPnauBody(serializedVaa: Uint8Array, batch: PriceUpdateBatch): PnauBody {
-        // let merkleLeaves = [...batch.hashed];
-        // // Compute merkle tree
-        // while (merkleLeaves.length > 1) {
-        //     let newLeaves = [];
-        //     // Loop through adjacent pairs
-        //     for (let i = 0; i < merkleLeaves.length; i += 2) {
-        //       const leftLeaf = merkleLeaves[i];
-        //        // Duplicate the last one if odd number of leaves
-        //       const rightLeaf = merkleLeaves[i + 1] || leftLeaf;        
-        //       newLeaves.push(keccak160HashNodes(leftLeaf, rightLeaf));
-        //     }
-        //     merkleLeaves = newLeaves;
-        // }
-
-        // TODO: For each price in batch, build the proof
-
-        return {
-            vaa: serializedVaa,
-            pricesUpdates: batch
         }
     }
 
@@ -260,6 +243,17 @@ export namespace pyth {
         components.push(v);
         // Vaa
         components.push(pnauBody.vaa);
+        // Number of prices updates
+        v = Buffer.alloc(1);
+        v.writeUint8(pnauBody.pricesUpdatesToSubmit.length, 0);
+        components.push(v);
+        // Loop on prices updates
+        for (let i = 0; i < pnauBody.pricesUpdates.serialized.length; i++) {
+            if (pnauBody.pricesUpdatesToSubmit.includes(pnauBody.pricesUpdates.decoded[i].priceIdentifier)) {
+                let priceUpdateData = pnauBody.pricesUpdates.serialized[i];
+                components.push(serializePriceUpdateToBuffer(priceUpdateData, pnauBody.pricesUpdates.proofs[i]))
+            }
+        }
         return Buffer.concat(components)
     }
 
@@ -277,7 +271,34 @@ export namespace pyth {
         return keccak_256(Buffer.concat([prefix, leaf])).slice(0, 20)
     }
 
-    export function buildPriceUpdate(priceIdentifier: Uint8Array, opts?: PriceUpdateBuildOptions):PriceUpdate {
+    function computeMerkleProof(targetLeaf: Uint8Array, batch: Uint8Array[]): Uint8Array[] {
+        let merkleLeaves = [...batch];
+        const proof = [];
+        let targetHash = targetLeaf;
+
+        while (merkleLeaves.length > 1) {
+            let newLeaves: Uint8Array[] = [];
+            for (let i = 0; i < merkleLeaves.length; i += 2) {
+                const leftLeaf = merkleLeaves[i];
+                const rightLeaf = merkleLeaves[i + 1] || leftLeaf; // Duplicate the last one if odd number of leaves
+                const parentNode = keccak160HashNodes(leftLeaf, rightLeaf);
+                newLeaves.push(parentNode);
+
+                // Capture the sibling for the proof if either leftLeaf or rightLeaf is the target
+                if (leftLeaf === targetHash) {
+                    proof.push(rightLeaf);
+                    targetHash = parentNode;
+                } else if (rightLeaf === targetHash) {
+                    proof.push(leftLeaf);
+                    targetHash = parentNode;
+                }
+            }
+            merkleLeaves = newLeaves;
+        }
+        return proof;
+    }
+
+    export function buildPriceUpdate(priceIdentifier: Uint8Array, opts?: PriceUpdateBuildOptions): PriceUpdate {
         return {
             priceIdentifier: priceIdentifier,
             price: opts?.price || 100n,
@@ -287,7 +308,6 @@ export namespace pyth {
             expo: -4,
             publishTime: opts?.publishTime || 10000001n,
             prevPublishTime: opts?.prevPublishTime || 10000000n,
-            proof: new Uint8Array(0),
         }
     }
 
@@ -331,11 +351,11 @@ export namespace pyth {
             }
 
             // prevPublishTime
-            let publishTime = prevPublishTime.chain((t: bigint) =>  fc.constant(t + 10n));
+            let publishTime = prevPublishTime.chain((t: bigint) => fc.constant(t + 10n));
             if (opts && opts.publishTime) {
                 publishTime = fc.constant(opts.publishTime);
             }
-            
+
             return fc.tuple(price, conf, emaPrice, emaConf, expo, prevPublishTime, publishTime);
         }
     }

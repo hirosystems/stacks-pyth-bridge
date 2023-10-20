@@ -1,4 +1,4 @@
-import { Cl } from "@stacks/transactions";
+import { Cl, ClarityType } from "@stacks/transactions";
 import { beforeEach, describe, expect, it } from "vitest";
 import { wormhole } from "../wormhole/helpers";
 import { pyth } from "./helpers";
@@ -12,19 +12,26 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds success", () => {
     const accounts = simnet.getAccounts();
     const sender = accounts.get("wallet_1")!;
     const guardianSet = wormhole.generateGuardianSetKeychain(19);
-    let priceUpdateBatch = pyth.buildPriceUpdateBatch([
+    let pricesUpdates = pyth.buildPriceUpdateBatch([
         [pyth.BtcPriceIdentifier],
-        [pyth.StxPriceIdentifier]
+        [pyth.StxPriceIdentifier],
+        [pyth.BatPriceIdentifer],
+        [pyth.DaiPriceIdentifer],
+        [pyth.TbtcPriceIdentifer],
+        [pyth.UsdcPriceIdentifer],
+        [pyth.UsdtPriceIdentifer],
+        [pyth.WbtcPriceIdentifer]
     ])
-    let priceUpdateBatchVaaPayload = pyth.buildAuwvVaaPayload(priceUpdateBatch);
+    let pricesUpdatesToSubmit = [pyth.BtcPriceIdentifier, pyth.StxPriceIdentifier, pyth.UsdcPriceIdentifer];
+    let pricesUpdatesVaaPayload = pyth.buildAuwvVaaPayload(pricesUpdates);
 
     // Before starting the test suite, we have to setup the guardian set.
     beforeEach(async () => {
         wormhole.applyGuardianSetUpdate(guardianSet, 1, sender, wormholeCoreContractName)
     })
 
-    it("should produce a successfully verifiable attestation", () => {
-        let payload = pyth.serializeAuwvVaaPayloadToBuffer(priceUpdateBatchVaaPayload);
+    it("should parse and verify the Vaa a a Pnau message", () => {
+        let payload = pyth.serializeAuwvVaaPayloadToBuffer(pricesUpdatesVaaPayload);
         let body = wormhole.buildValidVaaBodySpecs({ payload });
         let header = wormhole.buildValidVaaHeader(guardianSet, body, { version: 1, guardianSetId: 1 });
         let vaa = wormhole.serializeVaaToBuffer(header, body);
@@ -40,15 +47,12 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds success", () => {
     });
 
     it("should produce a correct verifiable empty vaa", () => {
-        let payload = pyth.serializeAuwvVaaPayloadToBuffer(priceUpdateBatchVaaPayload);
+        let payload = pyth.serializeAuwvVaaPayloadToBuffer(pricesUpdatesVaaPayload);
         let vaaBody = wormhole.buildValidVaaBodySpecs({ payload });
         let vaaHeader = wormhole.buildValidVaaHeader(guardianSet, vaaBody, { version: 1, guardianSetId: 1 });
         let vaa = wormhole.serializeVaaToBuffer(vaaHeader, vaaBody);
         let pnauHeader = pyth.buildPnauHeader();
-        let pnauBody = pyth.buildPnauBody(vaa, priceUpdateBatch);
-        let pnau = pyth.serializePnauToBuffer(pnauHeader, pnauBody);
-
-        let [decodedVaa, _] = wormhole.serializeVaaToClarityValue(vaaHeader, vaaBody, guardianSet);
+        let pnau = pyth.serializePnauToBuffer(pnauHeader, { vaa, pricesUpdates, pricesUpdatesToSubmit });
 
         let executionPlan = Cl.tuple({
             'pyth-storage-contract': Cl.contractPrincipal(simnet.deployer, pythStorageContractName),
@@ -57,12 +61,12 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds success", () => {
         });
         const res = simnet.callPublicFn(
             pythOracleContractName,
-            `verify-and-update-price-feeds`,
+            "verify-and-update-price-feeds",
             [Cl.buffer(pnau), executionPlan],
             sender
         );
 
-        expect(res.result).toBeErr(decodedVaa)
+        expect(res.result).toHaveClarityType(ClarityType.ResponseOk);
     });
 
 

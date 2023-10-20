@@ -1,7 +1,7 @@
 import { Cl, ClarityType } from "@stacks/transactions";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ParsedTransactionResult } from "@hirosystems/clarinet-sdk";
-import { apnuMainnetVaas } from "./fixtures";
+import { pnauMainnetVaas } from "./fixtures";
 import { wormhole } from "../wormhole/helpers";
 
 const pythOracleContractName = "pyth-oracle-v1";
@@ -28,7 +28,7 @@ describe("pyth-oracle-v1::decode-and-verify-price-feeds mainnet VAAs", () => {
     });
 
     it("should succeed handling PNAU mainnet payloads", () => {
-        const vaaBytes = Cl.bufferFromHex(apnuMainnetVaas[0]);
+        const pnauBytes = Cl.bufferFromHex(pnauMainnetVaas[0]);
         let priceIdentifier = Cl.bufferFromHex('ec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17');
         let priceUpdated = Cl.tuple({
             "price-identifier": priceIdentifier,
@@ -44,13 +44,13 @@ describe("pyth-oracle-v1::decode-and-verify-price-feeds mainnet VAAs", () => {
             'pyth-storage-contract': Cl.contractPrincipal(simnet.deployer, pythStorageContractName),
             'pyth-decoder-contract': Cl.contractPrincipal(simnet.deployer, pythDecoderPnauContractName),
             'wormhole-core-contract': Cl.contractPrincipal(simnet.deployer, wormholeCoreContractName),
-        });  
-  
+        });
+
         let res = simnet.callPublicFn(
             pythOracleContractName,
-          "verify-and-update-price-feeds",
-          [vaaBytes, executionPlan],
-          sender
+            "verify-and-update-price-feeds",
+            [pnauBytes, executionPlan],
+            sender
         ).result;
         expect(res).toBeOk(
             Cl.list([priceUpdated])
