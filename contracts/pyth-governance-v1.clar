@@ -12,22 +12,40 @@
 
 ;; VAA including some commands for administrating Pyth contract
 ;; The oracle contract address must be upgraded
-(define-constant PTGM_UPGRADE_CONTRACT_PYTH_ORACLE 0x00)
+(define-constant PTGM_UPDATE_PYTH_ORACLE_ADDRESS 0x00)
 ;; Authorize governance change
-(define-constant PTGM_AUTHORIZE_GOVERNANCE_DATA_SOURCE_TRANSFER 0x01)
+(define-constant PTGM_UPDATE_GOVERNANCE_DATA_SOURCE 0x01)
 ;; Which wormhole emitter is allowed to send price updates
-(define-constant PTGM_SET_DATA_SOURCES 0x02)
+(define-constant PTGM_UPDATE_PRICES_DATA_SOURCES 0x02)
 ;; Fee is charged when you submit a new price
-(define-constant PTGM_SET_FEE 0x03)
-;; Emit a request for governance change 
-(define-constant PTGM_REQUEST_GOVERNANCE_DATA_SOURCE_TRANSFER 0x05)
-;; Wormhole contract 
-(define-constant PTGM_UPGRADE_CONTRACT_WORMHOLE_CORE 0x06)
-;; Fee is charged when you submit a new price
-(define-constant PTGM_SET_RECIPIENT_ADDRESS 0xa0)
-;; Error unauthorized control flow
-(define-constant ERR_UNAUTHORIZED_ACCESS (err u404))
+(define-constant PTGM_UPDATE_FEE 0x03)
+;; Upgrade wormhole contract 
+(define-constant PTGM_UPDATE_WORMHOLE_CORE_ADDRESS 0x06)
+;; Special Stacks operation: update recipient address
+(define-constant PTGM_UPDATE_RECIPIENT_ADDRESS 0xa0)
+;; Special Stacks operation: update storage contract address
+(define-constant PTGM_UPDATE_PYTH_STORE_ADDRESS 0xa1)
+;; Special Stacks operation: update decoder contract address
+(define-constant PTGM_UPDATE_PYTH_DECODER_ADDRESS 0xa2)
+;; TODO: Pyth team to assign a chain id to Stacks.
+(define-constant EXPECTED_CHAIN_ID 0x00)
+;; TODO: Pyth team to assign a module to Stacks.
+(define-constant EXPECTED_MODULE 0x00)
 
+;; Error unauthorized control flow
+(define-constant ERR_UNAUTHORIZED_ACCESS (err u4004))
+;; Error unexpected action
+(define-constant ERR_UNEXPECTED_ACTION (err u4001))
+;; Error unexpected action payload
+(define-constant ERR_UNEXPECTED_ACTION_PAYLOAD (err u4002))
+;; Error unexpected action
+(define-constant ERR_INVALID_ACTION_PAYLOAD (err u4003))
+;; Error outdated action
+(define-constant ERR_OUTDATED (err u4005))
+;; Error unauthorized update
+(define-constant ERR_UNAUTHORIZED_UPDATE (err u4006))
+;; Error parsing PGTM
+(define-constant ERR_INVALID_PTGM (err u4007))
 
 (define-data-var fee-value 
   { mantissa: uint, exponent: uint } 
@@ -35,12 +53,12 @@
 (define-data-var price-data-sources (buff 32) 0x)
 (define-data-var governance-data-source 
   { emitter-chain: uint, emitter-address: (buff 32) }
-  { emitter-chain: u0, emitter-address: 0x })
+  { emitter-chain: u0, emitter-address: 0x0000000000000000000000000000000000000000000000000000000000000000 }) ;; TODO: set initial value
 (define-data-var fee-recipient-address principal tx-sender)
 
-(define-map prices-data-sources uint 
-  (list 255 { emitter-chain: uint, emitter-address: (buff 32) }))
-(define-data-var current-prices-data-sources-id uint u0)
+(define-data-var last-sequence-processed uint u0) ;; TODO: set initial value
+
+(define-data-var prices-data-sources (list 255 { emitter-chain: uint, emitter-address: (buff 32) }) (list))
 
 (define-map execution-plans uint { 
   pyth-oracle-contract: principal,
@@ -75,11 +93,7 @@
           ;; Other contract
           (if (is-eq contract-caller (get pyth-decoder-contract expected-execution-plan))
             ;; The decoding contract is checking its execution flow
-            (let ((execution-plan (unwrap! execution-plan-opt ERR_UNAUTHORIZED_ACCESS)))
-              ;; Must always be invoked by the proxy
-              (try! (expect-contract-call-performed-by-expected-oracle-contract former-contract-caller expected-execution-plan))
-              ;; Ensure that wormhole contract is the one expected
-              (try! (expect-active-wormhole-contract (get wormhole-core-contract execution-plan) expected-execution-plan)))
+            (try! (expect-contract-call-performed-by-expected-oracle-contract former-contract-caller expected-execution-plan))
             (if (is-eq contract-caller (get pyth-oracle-contract expected-execution-plan))
               ;; The proxy contract is checking its execution flow
               (let ((execution-plan (unwrap! execution-plan-opt ERR_UNAUTHORIZED_ACCESS)))
@@ -97,6 +111,152 @@
   (let ((expected-execution-plan (get-current-execution-plan)))
       ;; Ensure that storage contract is the one expected
       (expect-active-storage-contract storage-contract expected-execution-plan)))
+
+(define-read-only (get-current-execution-plan)
+  (unwrap-panic (map-get? execution-plans (var-get current-execution-plan-id))))
+
+(define-read-only (get-fee-info)
+  (merge (var-get fee-value) { address: (var-get fee-recipient-address) }))
+
+(define-read-only (get-authorized-prices-data-sources)
+  (var-get prices-data-sources))
+
+(define-public (update-fee-value (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (get-current-execution-plan))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_UPDATE_FEE) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update fee-value
+    (let ((updated-data (try! (parse-and-verify-fee-value (get body ptgm)))))
+      (var-set fee-value updated-data)
+      (ok updated-data))))
+
+(define-public (update-fee-recipient-address (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (get-current-execution-plan))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_UPDATE_RECIPIENT_ADDRESS) ERR_UNEXPECTED_ACTION)
+      ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update fee-recipient address
+    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+      (var-set fee-recipient-address updated-data)
+      (ok updated-data))))
+
+(define-public (update-wormhole-core-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (get-current-execution-plan))
+        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_UPDATE_WORMHOLE_CORE_ADDRESS) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update execution plan
+    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { wormhole-core-contract: updated-data }))
+      (var-set current-execution-plan-id next-execution-plan-id)
+      (ok (get-current-execution-plan)))))
+
+(define-public (update-pyth-oracle-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (get-current-execution-plan))
+        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_UPDATE_PYTH_ORACLE_ADDRESS) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update execution plan
+    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-oracle-contract: updated-data }))
+      (var-set current-execution-plan-id next-execution-plan-id)
+      (ok (get-current-execution-plan)))))
+
+(define-public (update-pyth-decoder-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (get-current-execution-plan))
+        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_UPDATE_PYTH_DECODER_ADDRESS) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update execution plan
+    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-decoder-contract: updated-data }))
+      (var-set current-execution-plan-id next-execution-plan-id)
+      (ok (get-current-execution-plan)))))
+
+(define-public (update-pyth-store-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (get-current-execution-plan))
+        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_UPDATE_PYTH_STORE_ADDRESS) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update execution plan
+    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-storage-contract: updated-data }))
+      (var-set current-execution-plan-id next-execution-plan-id)
+      (ok (get-current-execution-plan)))))
+
+(define-public (update-prices-data-sources (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (get-current-execution-plan))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_UPDATE_PRICES_DATA_SOURCES) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update prices-data-sources
+    (let ((updated-data (try! (parse-and-verify-prices-data-sources (get body ptgm)))))
+      (var-set prices-data-sources updated-data)
+      (ok updated-data))))
+
+(define-public (update-governance-data-source (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (get-current-execution-plan))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_UPDATE_GOVERNANCE_DATA_SOURCE) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update prices-data-sources
+    (let ((updated-data (try! (parse-and-verify-governance-data-source (get body ptgm)))))
+      (var-set governance-data-source updated-data)
+      (ok updated-data))))
+
+(define-private (check-update-source (emitter-chain uint) (emitter-address (buff 32)))
+  (let ((authorized-data-source (var-get governance-data-source)))
+    ;; Check data-source
+    (asserts! (is-eq 
+        authorized-data-source 
+        { emitter-chain: emitter-chain, emitter-address: emitter-address })
+      ERR_UNAUTHORIZED_UPDATE)
+    (ok true)))
 
 (define-private (expect-contract-call-performed-by-expected-oracle-contract 
   (former-contract-caller principal) 
@@ -124,7 +284,8 @@
     (asserts! 
       (is-eq 
         (contract-of storage-contract) 
-        (get pyth-storage-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
+        (get pyth-storage-contract expected-plan)) 
+      ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (expect-active-decoder-contract 
@@ -139,7 +300,8 @@
     (asserts! 
       (is-eq 
         (contract-of decoder-contract) 
-        (get pyth-decoder-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
+        (get pyth-decoder-contract expected-plan)) 
+      ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (expect-active-wormhole-contract 
@@ -154,132 +316,78 @@
     (asserts! 
       (is-eq 
         (contract-of wormhole-contract) 
-        (get wormhole-core-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
+        (get wormhole-core-contract expected-plan))
+      ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
-(define-read-only (get-current-execution-plan)
-  (unwrap-panic (map-get? execution-plans (var-get current-execution-plan-id))))
+(define-private (parse-and-verify-ptgm (ptgm-bytes (buff 8192)) (sequence uint))
+  (let ((cursor-magic (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-4 { bytes: ptgm-bytes, pos: u0 }) 
+          ERR_INVALID_PTGM))
+        (cursor-module (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-1 (get next cursor-magic)) 
+          ERR_INVALID_PTGM))
+        (cursor-action (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-1 (get next cursor-module)) 
+          ERR_INVALID_PTGM))
+        (cursor-target-chain-id (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-1 (get next cursor-action)) 
+          ERR_INVALID_PTGM))
+        (cursor-body (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-8192-max (get next cursor-target-chain-id) none)
+          ERR_INVALID_PTGM)))
+    ;; Check magic bytes
+    (asserts! (is-eq (get value cursor-magic) PTGM_MAGIC) ERR_INVALID_PTGM)
+    ;; Check target-chain-id
+    (asserts! (is-eq (get value cursor-target-chain-id) EXPECTED_CHAIN_ID) ERR_INVALID_PTGM)
+    ;; Check module
+    (asserts! (is-eq (get value cursor-module) EXPECTED_MODULE) ERR_INVALID_PTGM)
+    ;; Check Sequence
+    (asserts! (> sequence (var-get last-sequence-processed)) ERR_OUTDATED)
+    ;; Update Sequence
+    (var-set last-sequence-processed sequence)
+    (ok { 
+      action: (get value cursor-action), 
+      target-chain-id: (get value cursor-target-chain-id), 
+      module: (get value cursor-module),
+      cursor: cursor-target-chain-id,
+      body: (get value cursor-body)
+    })))
 
-(define-read-only (get-fee-info)
-  (merge (var-get fee-value) { address: (var-get fee-recipient-address) }))
-
-(define-public (update-fee-value (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
-        (fee-value-update (try! (parse-and-verify-fee-value (get payload vaa)))))
-    ;; Ensure that the lastest wormhole contract is used
-    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
-    ;; 
-    (var-set fee-value fee-value-update)
-    (ok fee-value-update)))
-
-(define-public (update-fee-recipient-address (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
-        (ptgm (try! (parse-and-verify-ptgm (get payload vaa)))))
-    ;; Ensure that the lastest wormhole contract is used
-    (asserts! (is-eq (get action ptgm) PTGM_SET_RECIPIENT_ADDRESS) (err u1))
-    ;; Ensure that the lastest wormhole contract is used
-    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
-    ;;
-    (let ((updated-address (unwrap! (from-consensus-buff? principal (get body ptgm)) (err u2))))
-      (var-set fee-recipient-address updated-address)
-      (ok updated-address))))
-
-(define-public (update-wormhole-core-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
-        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
-        (ptgm (try! (parse-and-verify-ptgm (get payload vaa)))))
-    ;; Ensure that the lastest wormhole contract is used
-    (asserts! (is-eq (get action ptgm) PTGM_UPGRADE_CONTRACT_WORMHOLE_CORE) (err u1))
-    ;; Ensure that the lastest wormhole contract is used
-    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
-    ;;
-    (let ((updated-address (unwrap! (from-consensus-buff? principal (get body ptgm)) (err u2))))
-      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { wormhole-core-contract: updated-address }))
-      (var-set current-execution-plan-id next-execution-plan-id)
-      (ok (get-current-execution-plan)))))
-
-(define-public (update-pyth-oracle-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
-        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
-        (ptgm (try! (parse-and-verify-ptgm (get payload vaa)))))
-    ;; Ensure that the lastest wormhole contract is used
-    (asserts! (is-eq (get action ptgm) PTGM_UPGRADE_CONTRACT_PYTH_ORACLE) (err u1))
-    ;; Ensure that the lastest wormhole contract is used
-    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
-    ;;
-    (let ((updated-address (unwrap! (from-consensus-buff? principal (get body ptgm)) (err u2))))
-      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-oracle-contract: updated-address }))
-      (var-set current-execution-plan-id next-execution-plan-id)
-      (ok (get-current-execution-plan)))))
-
-(define-public (update-prices-data-sources (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (next-prices-data-sources-id (+ (var-get current-prices-data-sources-id) u1))
-        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
-        (prices-data-sources-update (try! (parse-and-verify-prices-data-sources (get payload vaa)))))
-    ;; Ensure that the lastest wormhole contract is used
-    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
-    ;; 
-    (map-set prices-data-sources next-prices-data-sources-id prices-data-sources-update)
-    (ok prices-data-sources-update)))
-
-(define-private (parse-and-verify-ptgm (ptgm-bytes (buff 8192)))
-    (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: ptgm-bytes, pos: u0 }) 
-            (err u0)))
-          (cursor-module (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-magic)) 
-            (err u1)))
-          (cursor-action (unwrap! (contract-call? .hk-cursor-v1 read-buff-1 (get next cursor-module)) 
-            (err u2)))
-          (cursor-target-chain-id (unwrap! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-action)) 
-            (err u3)))
-          (cursor-body (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-target-chain-id) none)
-            (err u4))))
-        ;; Check magic bytes
-        (asserts! (is-eq (get value cursor-magic) PTGM_MAGIC) (err u8))
-        ;;
-        (ok { 
-          action: (get value cursor-action), 
-          target-chain-id: (get value cursor-target-chain-id), 
-          module: (get value cursor-module),
-          cursor: cursor-target-chain-id,
-          body: (get value cursor-body)
-        })))
-
-(define-private (parse-and-verify-fee-value (fee-value-bytes (buff 8192)))
-  (let ((ptgm (try! (parse-and-verify-ptgm fee-value-bytes))))
-      (asserts! (is-eq (get action ptgm) PTGM_SET_FEE) (err u9))
-      ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-mantissa (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next (get cursor ptgm))) 
-              (err u100)))
-            (cursor-exponent (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-mantissa)) 
-              (err u100))))
+(define-private (parse-and-verify-fee-value (ptgm-body (buff 8192)))
+  (let ((cursor-ptgm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new ptgm-body none))
+        (cursor-mantissa (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-64 (get next cursor-ptgm-body)) 
+          ERR_INVALID_ACTION_PAYLOAD))
+        (cursor-exponent (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-64 (get next cursor-mantissa)) 
+          ERR_INVALID_ACTION_PAYLOAD)))
     (ok { 
       mantissa: (get value cursor-mantissa), 
       exponent: (get value cursor-exponent) 
-    }))))
+    })))
 
-(define-private (parse-and-verify-prices-data-sources (prices-data-sources-bytes (buff 8192)))
-  (let ((ptgm (try! (parse-and-verify-ptgm prices-data-sources-bytes))))
-      (asserts! (is-eq (get action ptgm) PTGM_SET_DATA_SOURCES) (err u1))
-      ;; TODO: Check emitter-chain and emitter-address
-      (let ((cursor-num-data-sources (try! (contract-call? .hk-cursor-v1 read-uint-8 (get next (get cursor ptgm)))))
-            (cursor-data-sources-bytes (contract-call? .hk-cursor-v1 slice (get next cursor-num-data-sources) none))
-            (data-sources (get result (fold parse-data-sources cursor-data-sources-bytes { 
-              result: (list), 
-              cursor: {
-                index: u0,
-                next-update-index: u0
-              },
-              bytes: cursor-data-sources-bytes,
-              limit: (get value cursor-num-data-sources) 
-            }))))
-        (ok data-sources))))
+(define-private (parse-and-verify-governance-data-source (ptgm-body (buff 8192)))
+  (let ((cursor-ptgm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new ptgm-body none))
+        (cursor-emitter-chain (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-16 (get next cursor-ptgm-body))
+          ERR_INVALID_ACTION_PAYLOAD))
+        (cursor-emitter-address (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-32 (get next cursor-emitter-chain))
+          ERR_INVALID_ACTION_PAYLOAD)))
+    (ok { 
+      emitter-chain: (get value cursor-emitter-chain), 
+      emitter-address: (get value cursor-emitter-address) 
+    })))
 
-(define-private (parse-data-sources
+
+(define-private (parse-and-verify-prices-data-sources (pgtm-body (buff 8192)))
+  (let ((cursor-pgtm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new pgtm-body none))
+        (cursor-num-data-sources (try! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-pgtm-body))))
+        (cursor-data-sources-bytes (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 slice (get next cursor-num-data-sources) none))
+        (data-sources (get result (fold parse-data-source cursor-data-sources-bytes { 
+          result: (list), 
+          cursor: {
+            index: u0,
+            next-update-index: u0
+          },
+          bytes: cursor-data-sources-bytes,
+          limit: (get value cursor-num-data-sources) 
+        }))))
+    (ok data-sources)))
+
+(define-private (parse-data-source
       (entry (buff 1)) 
       (acc { 
         cursor: { 
@@ -294,14 +402,14 @@
     acc
     (if (is-eq (get index (get cursor acc)) (get next-update-index (get cursor acc)))
       ;; Parse update
-      (let ((buffer (contract-call? .hk-cursor-v1 new (get bytes acc) (some (get index (get cursor acc)))))
-            (cursor-emitter-chain (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 (get next buffer))))
-            (cursor-emitter-address (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-emitter-chain)))))
+      (let ((buffer (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new (get bytes acc) (some (get index (get cursor acc)))))
+            (cursor-emitter-chain (unwrap-panic (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-16 (get next buffer))))
+            (cursor-emitter-address (unwrap-panic (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-32 (get next cursor-emitter-chain)))))
         ;; Perform assertions
         {
           cursor: { 
             index: (+ (get index (get cursor acc)) u1),
-            next-update-index: (+ (get index (get cursor acc)) u33),
+            next-update-index: (+ (get index (get cursor acc)) u34),
           },
           bytes: (get bytes acc),
           result: (unwrap-panic (as-max-len? (append (get result acc) { 

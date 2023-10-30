@@ -76,7 +76,7 @@
   (let ((price-feed-entry (unwrap! (map-get? prices { price-feed-id: price-feed-id }) ERR_PF_NOT_FOUND)))
     (ok price-feed-entry)))
     
-(define-read-only (parse-and-verify-price-attestations (pf-bytes (buff 2048)))
+(define-private (parse-and-verify-price-attestations (pf-bytes (buff 2048)))
   (let ((cursor-price-attestations-header (try! (parse-price-attestations-header pf-bytes)))
         (cursor-attestations-count (unwrap! (contract-call? .hk-cursor-v1 read-u16 (get next cursor-price-attestations-header)) 
             ERR_P2WH_PARSING_ATTESTATION_COUNT))
@@ -106,7 +106,7 @@
       price-attestations: price-attestations
     })))
 
-(define-read-only (parse-price-attestations-header (pf-bytes (buff 2048)))
+(define-private (parse-price-attestations-header (pf-bytes (buff 2048)))
   (let ((cursor-magic (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: pf-bytes, pos: u0 }) 
           ERR_PF_PARSING_MAGIC_BYTES))
         ;; Todo: check magic bytes

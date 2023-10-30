@@ -69,6 +69,8 @@
 ;; Quorum of addresses required
 (define-constant QUORUM u13)
 
+(define-constant hk-cursor-v2 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2)
+
 ;;;; Data vars
 
 ;; Guardian Set Update uncompressed public keys invalid
@@ -104,11 +106,11 @@
 ;;
 ;; @param vaa-bytes: 
 (define-read-only (parse-vaa (vaa-bytes (buff 8192)))
-  (let ((cursor-version (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 { bytes: vaa-bytes, pos: u0 }) 
-          ERR_VAA_PARSING_VERSION))
-        (cursor-guardian-set-id (unwrap! (contract-call? .hk-cursor-v1 read-uint-32 (get next cursor-version)) 
+  (let ((cursor-version (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 { bytes: vaa-bytes, pos: u0 }) 
+           ERR_VAA_PARSING_VERSION))
+        (cursor-guardian-set-id (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-32 (get next cursor-version)) 
           ERR_VAA_PARSING_GUARDIAN_SET))
-        (cursor-signatures-len (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-guardian-set-id)) 
+        (cursor-signatures-len (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-guardian-set-id)) 
           ERR_VAA_PARSING_SIGNATURES_LEN))
         (cursor-signatures (fold batch-read-signatures
           (list u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0 u0)
@@ -117,21 +119,21 @@
               value: (list),
               iter: (get value cursor-signatures-len)
           }))
-        (vaa-body-hash (keccak256 (keccak256 (get value (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-signatures) none)
+        (vaa-body-hash (keccak256 (keccak256 (get value (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-8192-max (get next cursor-signatures) none)
           ERR_VAA_HASHING_BODY)))))
-        (cursor-timestamp (unwrap! (contract-call? .hk-cursor-v1 read-uint-32 (get next cursor-signatures)) 
+        (cursor-timestamp (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-32 (get next cursor-signatures)) 
           ERR_VAA_PARSING_TIMESTAMP))
-        (cursor-nonce (unwrap! (contract-call? .hk-cursor-v1 read-uint-32 (get next cursor-timestamp)) 
+        (cursor-nonce (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-32 (get next cursor-timestamp)) 
           ERR_VAA_PARSING_NONCE))
-        (cursor-emitter-chain (unwrap! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-nonce)) 
+        (cursor-emitter-chain (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-16 (get next cursor-nonce)) 
           ERR_VAA_PARSING_EMITTER_CHAIN))
-        (cursor-emitter-address (unwrap! (contract-call? .hk-cursor-v1 read-buff-32 (get next cursor-emitter-chain)) 
+        (cursor-emitter-address (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-32 (get next cursor-emitter-chain)) 
           ERR_VAA_PARSING_EMITTER_ADDRESS))
-        (cursor-sequence (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-emitter-address)) 
+        (cursor-sequence (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-64 (get next cursor-emitter-address)) 
           ERR_VAA_PARSING_SEQUENCE))
-        (cursor-consistency-level (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-sequence)) 
+        (cursor-consistency-level (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-sequence)) 
           ERR_VAA_PARSING_CONSISTENCY_LEVEL))
-        (cursor-payload (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-consistency-level) none)
+        (cursor-payload (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-8192-max (get next cursor-consistency-level) none)
           ERR_VAA_PARSING_PAYLOAD))
         (public-keys-results (fold batch-recover-public-keys
           (get value cursor-signatures)
@@ -215,7 +217,7 @@
       }
     })))
 
-(define-public (get-active-guardian-set) 
+(define-read-only (get-active-guardian-set) 
   (let ((set-id (var-get active-guardian-set-id))
         (guardians (unwrap-panic (map-get? guardian-sets { set-id: set-id }))))
       (ok {
@@ -280,8 +282,8 @@
       (acc { next: { bytes: (buff 8192), pos: uint }, iter: uint, value: (list 19 { guardian-id: uint, signature: (buff 65) })}))
   (if (is-eq (get iter acc) u0)
     { iter: u0, next: (get next acc), value: (get value acc) }
-    (let ((cursor-guardian-id (unwrap-panic (contract-call? .hk-cursor-v1 read-uint-8 (get next acc))))
-          (cursor-signature (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-65 (get next cursor-guardian-id)))))
+    (let ((cursor-guardian-id (unwrap-panic (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next acc))))
+          (cursor-signature (unwrap-panic (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-65 (get next cursor-guardian-id)))))
       { 
         iter: (- (get iter acc) u1), 
         next: (get next cursor-signature), 
@@ -300,7 +302,7 @@
 
 (define-private (parse-guardian (cue-position uint) (acc { bytes: (buff 8192), result: (list 19 (buff 20))}))
   (let (
-    (cursor-address-bytes (unwrap-panic (contract-call? .hk-cursor-v1 read-buff-20 { bytes: (get bytes acc), pos: cue-position })))
+    (cursor-address-bytes (unwrap-panic (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-20 { bytes: (get bytes acc), pos: cue-position })))
   )
   {
     bytes: (get bytes acc),
@@ -310,17 +312,17 @@
 ;; @desc Parse and verify payload's VAA  
 (define-private (parse-and-verify-guardians-set (bytes (buff 8192)))
   (let 
-      ((cursor-module (unwrap! (contract-call? .hk-cursor-v1 read-buff-32 { bytes: bytes, pos: u0 }) 
+      ((cursor-module (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-32 { bytes: bytes, pos: u0 }) 
           ERR_GSU_PARSING_MODULE))
-      (cursor-action (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-module)) 
+      (cursor-action (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-module)) 
           ERR_GSU_PARSING_ACTION))
-      (cursor-chain (unwrap! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-action)) 
+      (cursor-chain (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-16 (get next cursor-action)) 
           ERR_GSU_PARSING_CHAIN))
-      (cursor-new-index (unwrap! (contract-call? .hk-cursor-v1 read-uint-32 (get next cursor-chain)) 
+      (cursor-new-index (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-32 (get next cursor-chain)) 
           ERR_GSU_PARSING_INDEX))
-      (cursor-guardians-count (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-new-index)) 
+      (cursor-guardians-count (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-new-index)) 
           ERR_GSU_PARSING_GUARDIAN_LEN))
-      (guardians-bytes (unwrap! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-guardians-count) (some (* (get value cursor-guardians-count) u20))) 
+      (guardians-bytes (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-8192-max (get next cursor-guardians-count) (some (* (get value cursor-guardians-count) u20))) 
           ERR_GSU_PARSING_GUARDIANS_BYTES))
       (guardians-cues (get result (fold is-guardian-cue (get value guardians-bytes) { cursor: u0, result: (list) })))
       (eth-addresses (get result (fold parse-guardian guardians-cues { bytes: (get value guardians-bytes), result: (list) }))))

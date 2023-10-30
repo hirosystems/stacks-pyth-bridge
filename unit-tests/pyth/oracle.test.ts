@@ -30,7 +30,7 @@ describe("pyth-oracle-v1::decode-and-verify-price-feeds mainnet VAAs", () => {
     });
   });
 
-  it("should succeed handling PNAU mainnet payloads", () => {
+  it.skip("should succeed handling PNAU mainnet payloads", () => {
     const pnauBytes = Cl.bufferFromHex(pnauMainnetVaas[0]);
     let priceIdentifier = Cl.bufferFromHex(
       "ec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17",

@@ -2,6 +2,7 @@ import { Cl } from "@stacks/transactions";
 import { beforeEach, describe, expect, it } from "vitest";
 import { wormhole } from "../wormhole/helpers";
 import { pyth } from "./helpers";
+import { hexToBytes } from "@noble/hashes/utils";
 
 const pythOracleContractName = "pyth-oracle-v1";
 const pythStorageContractName = "pyth-store-v1";
@@ -71,6 +72,29 @@ describe("pyth-governance-v1::update-fee-value", () => {
       }),
     );
   });
+
+  it("should fail if action mismatches", () => {
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-fee-value`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
+  });
 });
 
 describe("pyth-governance-v1::update-fee-recipient", () => {
@@ -126,6 +150,29 @@ describe("pyth-governance-v1::update-fee-recipient", () => {
         mantissa: Cl.uint(1),
       }),
     );
+  });
+
+  it("should fail if action mismatches", () => {
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-fee-recipient-address`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
   });
 });
 
@@ -196,6 +243,308 @@ describe("pyth-governance-v1::update-wormhole-core-contract", () => {
       sender,
     );
     expect(Cl.ok(res.result)).toBeOk(executionPlan);
+
+    // Any future call from the now outdated v1 contract should be rejected
+    let executionPlanBase = {
+      "pyth-decoder-contract": Cl.contractPrincipal(
+        deployer,
+        pythDecoderPnauContractName,
+      ),
+      "pyth-storage-contract": Cl.contractPrincipal(
+        deployer,
+        pythStorageContractName,
+      ),
+      "wormhole-core-contract": Cl.contractPrincipal(
+        deployer,
+        wormholeCoreContractName,
+      ),
+    };
+    res = simnet.callPublicFn(
+      pythOracleContractName,
+      `verify-and-update-price-feeds`,
+      [Cl.bufferFromHex("00"), Cl.tuple(executionPlanBase)],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4004));
+  });
+
+  it("should fail if action mismatches", () => {
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-wormhole-core-contract`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
+  });
+});
+
+describe("pyth-governance-v1::update-pyth-decoder-contract", () => {
+  const accounts = simnet.getAccounts();
+  const sender = accounts.get("wallet_1")!;
+  const deployer = accounts.get("deployer")!;
+  const guardianSet = wormhole.generateGuardianSetKeychain(19);
+  let updateDecoderContract = {
+    address: "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG",
+    contractName: "pyth-decoder-v2",
+  };
+  let ptgmVaaPayload = pyth.buildPtgmVaaPayload({ updateDecoderContract });
+
+  // Before starting the test suite, we have to setup the guardian set.
+  beforeEach(async () => {
+    wormhole.applyGuardianSetUpdate(
+      guardianSet,
+      1,
+      sender,
+      wormholeCoreContractName,
+    );
+  });
+
+  it("should update the execution plan on successful updates", () => {
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-pyth-decoder-contract`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    let executionPlan = Cl.tuple({
+      "pyth-oracle-contract": Cl.contractPrincipal(
+        deployer,
+        pythOracleContractName,
+      ),
+      "pyth-decoder-contract": Cl.contractPrincipal(
+        updateDecoderContract.address,
+        updateDecoderContract.contractName,
+      ),
+      "pyth-storage-contract": Cl.contractPrincipal(
+        deployer,
+        pythStorageContractName,
+      ),
+      "wormhole-core-contract": Cl.contractPrincipal(
+        deployer,
+        wormholeCoreContractName,
+      ),
+    });
+    expect(res.result).toBeOk(executionPlan);
+
+    res = simnet.callReadOnlyFn(
+      pythGovernanceContractName,
+      `get-current-execution-plan`,
+      [],
+      sender,
+    );
+    expect(Cl.ok(res.result)).toBeOk(executionPlan);
+
+    // Any future call from the now outdated v1 contract should be rejected
+    let executionPlanBase = {
+      "pyth-decoder-contract": Cl.contractPrincipal(
+        deployer,
+        pythDecoderPnauContractName,
+      ),
+      "pyth-storage-contract": Cl.contractPrincipal(
+        deployer,
+        pythStorageContractName,
+      ),
+      "wormhole-core-contract": Cl.contractPrincipal(
+        deployer,
+        wormholeCoreContractName,
+      ),
+    };
+    res = simnet.callPublicFn(
+      pythOracleContractName,
+      `verify-and-update-price-feeds`,
+      [Cl.bufferFromHex("00"), Cl.tuple(executionPlanBase)],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4004));
+  });
+
+  it("should not be callable directly", () => {
+    let res = simnet.callPublicFn(
+      pythDecoderPnauContractName,
+      `decode-and-verify-price-feeds`,
+      [
+        Cl.bufferFromHex("00"),
+        Cl.contractPrincipal(deployer, wormholeCoreContractName),
+      ],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4004));
+  });
+
+  it("should fail if action mismatches", () => {
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-pyth-decoder-contract`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
+  });
+});
+
+describe("pyth-governance-v1::update-pyth-store-contract", () => {
+  const accounts = simnet.getAccounts();
+  const sender = accounts.get("wallet_1")!;
+  const deployer = accounts.get("deployer")!;
+  const guardianSet = wormhole.generateGuardianSetKeychain(19);
+  let updateStoreContract = {
+    address: "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG",
+    contractName: "pyth-store-v2",
+  };
+  let ptgmVaaPayload = pyth.buildPtgmVaaPayload({ updateStoreContract });
+
+  // Before starting the test suite, we have to setup the guardian set.
+  beforeEach(async () => {
+    wormhole.applyGuardianSetUpdate(
+      guardianSet,
+      1,
+      sender,
+      wormholeCoreContractName,
+    );
+  });
+
+  it("should update the execution plan on successful updates", () => {
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-pyth-store-contract`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    let executionPlan = Cl.tuple({
+      "pyth-oracle-contract": Cl.contractPrincipal(
+        deployer,
+        pythOracleContractName,
+      ),
+      "pyth-decoder-contract": Cl.contractPrincipal(
+        deployer,
+        pythDecoderPnauContractName,
+      ),
+      "pyth-storage-contract": Cl.contractPrincipal(
+        updateStoreContract.address,
+        updateStoreContract.contractName,
+      ),
+      "wormhole-core-contract": Cl.contractPrincipal(
+        deployer,
+        wormholeCoreContractName,
+      ),
+    });
+    expect(res.result).toBeOk(executionPlan);
+
+    res = simnet.callReadOnlyFn(
+      pythGovernanceContractName,
+      `get-current-execution-plan`,
+      [],
+      sender,
+    );
+    expect(Cl.ok(res.result)).toBeOk(executionPlan);
+
+    // Any future call from the now outdated v1 contract should be rejected
+    let executionPlanBase = {
+      "pyth-decoder-contract": Cl.contractPrincipal(
+        deployer,
+        pythDecoderPnauContractName,
+      ),
+      "pyth-storage-contract": Cl.contractPrincipal(
+        deployer,
+        pythStorageContractName,
+      ),
+      "wormhole-core-contract": Cl.contractPrincipal(
+        deployer,
+        wormholeCoreContractName,
+      ),
+    };
+    res = simnet.callPublicFn(
+      pythOracleContractName,
+      `verify-and-update-price-feeds`,
+      [Cl.bufferFromHex("00"), Cl.tuple(executionPlanBase)],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4004));
+
+    res = simnet.callPublicFn(
+      pythOracleContractName,
+      `read-price-feed`,
+      [
+        Cl.bufferFromHex("00"),
+        Cl.contractPrincipal(deployer, pythStorageContractName),
+      ],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4004));
+  });
+
+  it("should fail if action mismatches", () => {
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-pyth-store-contract`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
   });
 });
 
@@ -239,11 +588,7 @@ describe("pyth-governance-v1::update-pyth-oracle-contract", () => {
       [Cl.buffer(vaa), wormholeContract],
       sender,
     );
-    let executionPlan = Cl.tuple({
-      "pyth-oracle-contract": Cl.contractPrincipal(
-        updateOracleContract.address,
-        updateOracleContract.contractName,
-      ),
+    let executionPlanBase = {
       "pyth-decoder-contract": Cl.contractPrincipal(
         deployer,
         pythDecoderPnauContractName,
@@ -256,6 +601,14 @@ describe("pyth-governance-v1::update-pyth-oracle-contract", () => {
         deployer,
         wormholeCoreContractName,
       ),
+    };
+
+    let executionPlan = Cl.tuple({
+      "pyth-oracle-contract": Cl.contractPrincipal(
+        updateOracleContract.address,
+        updateOracleContract.contractName,
+      ),
+      ...executionPlanBase,
     });
     expect(res.result).toBeOk(executionPlan);
 
@@ -266,6 +619,38 @@ describe("pyth-governance-v1::update-pyth-oracle-contract", () => {
       sender,
     );
     expect(Cl.ok(res.result)).toBeOk(executionPlan);
+
+    // Any future call from the now outdated v1 contract should be rejected
+    res = simnet.callPublicFn(
+      pythOracleContractName,
+      `verify-and-update-price-feeds`,
+      [Cl.bufferFromHex("00"), Cl.tuple(executionPlanBase)],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4004));
+  });
+
+  it("should fail if action mismatches", () => {
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-pyth-oracle-contract`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
   });
 });
 
@@ -282,6 +667,10 @@ describe("pyth-governance-v1::update-prices-data-sources", () => {
       chain: 6,
       address: Buffer.alloc(32),
     },
+    {
+      chain: 7,
+      address: Buffer.alloc(32),
+    },
   ];
   let ptgmVaaPayload = pyth.buildPtgmVaaPayload({ updatePricesDataSources });
 
@@ -295,9 +684,12 @@ describe("pyth-governance-v1::update-prices-data-sources", () => {
     );
   });
 
-  it("should update fee-info on successful updates", () => {
+  it("should update prices data sources on successful updates", () => {
     let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
-    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.InitialGovernanceDataSource,
+    });
     let header = wormhole.buildValidVaaHeader(guardianSet, body, {
       version: 1,
       guardianSetId: 1,
@@ -324,5 +716,272 @@ describe("pyth-governance-v1::update-prices-data-sources", () => {
         ),
       ),
     );
+  });
+
+  it("should fail if action mismatches", () => {
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-prices-data-sources`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
+  });
+});
+
+describe("pyth-governance-v1::update-governance-data-source", () => {
+  const accounts = simnet.getAccounts();
+  const sender = accounts.get("wallet_1")!;
+  const guardianSet = wormhole.generateGuardianSetKeychain(19);
+  let updateGovernanceDataSource = {
+    chain: 0xff,
+    address: hexToBytes(
+      "FF00000000000000000000000000000000000000000000000000000000000000",
+    ),
+  };
+
+  // Before starting the test suite, we have to setup the guardian set.
+  beforeEach(async () => {
+    wormhole.applyGuardianSetUpdate(
+      guardianSet,
+      1,
+      sender,
+      wormholeCoreContractName,
+    );
+
+    pyth.applyGovernanceDataSourceUpdate(
+      pyth.DefaultGovernanceDataSource,
+      pyth.InitialGovernanceDataSource,
+      guardianSet,
+      sender,
+      pythGovernanceContractName,
+      wormholeCoreContractName,
+      1n,
+    );
+  });
+
+  it("should update governance data source on successful updates", () => {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateGovernanceDataSource,
+    });
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultGovernanceDataSource,
+      sequence: 2n,
+    });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-governance-data-source`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeOk(
+      Cl.tuple({
+        "emitter-address": Cl.buffer(updateGovernanceDataSource.address),
+        "emitter-chain": Cl.uint(updateGovernanceDataSource.chain),
+      }),
+    );
+  });
+
+  it("should fail if action mismatches", () => {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateGovernanceDataSource,
+    });
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultGovernanceDataSource,
+      sequence: 2n,
+    });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-governance-data-source`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
+  });
+
+  it("should fail if magic bytes are mismatching", () => {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateGovernanceDataSource,
+    });
+    ptgmVaaPayload.magicBytes = hexToBytes("00000000");
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultGovernanceDataSource,
+      sequence: 2n,
+    });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-prices-data-sources`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4007));
+  });
+
+  it("should fail if target chain id is mismatching", () => {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateGovernanceDataSource,
+    });
+    ptgmVaaPayload.targetChainId = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultGovernanceDataSource,
+      sequence: 2n,
+    });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-prices-data-sources`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4007));
+  });
+
+  it("should fail if module is mismatching", () => {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateGovernanceDataSource,
+    });
+    ptgmVaaPayload.module = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultGovernanceDataSource,
+      sequence: 2n,
+    });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-prices-data-sources`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4007));
+  });
+
+  it("should fail if sequence is outdated", () => {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateGovernanceDataSource,
+    });
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultGovernanceDataSource,
+      sequence: 1n,
+    });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-governance-data-source`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4005));
+  });
+
+  it("should fail if data source is unauthorized", () => {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateGovernanceDataSource,
+    });
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.InitialGovernanceDataSource,
+      sequence: 2n,
+    });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-governance-data-source`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4006));
   });
 });

@@ -4,7 +4,20 @@ description = ''
 authors = []
 telemetry = false
 cache_dir = './.cache'
-requirements = []
+
+[[project.requirements]]
+contract_id = 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2'
+
+[[project.requirements]]
+contract_id = 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-ecc-v1'
+
+[[project.requirements]]
+contract_id = 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-merkle-tree-keccak160-v1'
+
+[contracts.pyth-helper-v1]
+path = 'contracts/pyth-helper-v1.clar'
+clarity_version = 2
+epoch = 2.4
 
 [contracts.pyth-governance-v1]
 path = 'contracts/pyth-governance-v1.clar'
@@ -20,7 +33,6 @@ epoch = 2.4
 path = 'contracts/pyth-store-v1.clar'
 clarity_version = 2
 epoch = 2.4
-
 
 [contracts.pyth-pnau-decoder-v1]
 path = 'contracts/pyth-pnau-decoder-v1.clar'
@@ -41,17 +53,6 @@ epoch = 2.4
 path = 'contracts/wormhole/wormhole-traits-v1.clar'
 clarity_version = 2
 epoch = 2.4
-
-[contracts.hk-cursor-v1]
-path = 'contracts/hiro-kit/hk-cursor-v1.clar'
-clarity_version = 2
-epoch = 2.4
-
-[contracts.hk-merkle-tree-keccak160-v1]
-path = 'contracts/hiro-kit/hk-merkle-tree-keccak160-v1.clar'
-clarity_version = 2
-epoch = 2.4
-
 
 [repl.analysis]
 passes = ['check_checker']
