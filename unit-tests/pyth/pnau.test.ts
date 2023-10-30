@@ -584,4 +584,41 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
     );
     expect(res.result).toBeErr(Cl.uint(2005));
   });
+
+  it("should fail if PNAU include Merkle root mismatches", () => {
+    let actualPricesUpdates = pyth.buildPriceUpdateBatch([
+      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+    ]);
+    let actualPricesUpdatesVaaPayload =
+      pyth.buildAuwvVaaPayload(actualPricesUpdates);
+    actualPricesUpdatesVaaPayload.merkleRootHash = new Uint8Array(
+      Buffer.alloc(32),
+    );
+    let payload = pyth.serializeAuwvVaaPayloadToBuffer(
+      actualPricesUpdatesVaaPayload,
+    );
+    let vaaBody = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultPricesDataSources[0],
+    });
+    let vaaHeader = wormhole.buildValidVaaHeader(guardianSet, vaaBody, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(vaaHeader, vaaBody);
+    let pnauHeader = pyth.buildPnauHeader();
+    let pnau = pyth.serializePnauToBuffer(pnauHeader, {
+      vaa,
+      pricesUpdates: actualPricesUpdates,
+      pricesUpdatesToSubmit,
+    });
+
+    let res = simnet.callPublicFn(
+      pythOracleContractName,
+      "verify-and-update-price-feeds",
+      [Cl.buffer(pnau), executionPlan],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(2008));
+  });
 });

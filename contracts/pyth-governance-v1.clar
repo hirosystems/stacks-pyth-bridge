@@ -284,7 +284,8 @@
     (asserts! 
       (is-eq 
         (contract-of storage-contract) 
-        (get pyth-storage-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
+        (get pyth-storage-contract expected-plan)) 
+      ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (expect-active-decoder-contract 
@@ -299,7 +300,8 @@
     (asserts! 
       (is-eq 
         (contract-of decoder-contract) 
-        (get pyth-decoder-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
+        (get pyth-decoder-contract expected-plan)) 
+      ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (expect-active-wormhole-contract 
@@ -314,7 +316,8 @@
     (asserts! 
       (is-eq 
         (contract-of wormhole-contract) 
-        (get wormhole-core-contract expected-plan)) ERR_UNAUTHORIZED_ACCESS)
+        (get wormhole-core-contract expected-plan))
+      ERR_UNAUTHORIZED_ACCESS)
     (ok true)))
 
 (define-private (parse-and-verify-ptgm (ptgm-bytes (buff 8192)) (sequence uint))
