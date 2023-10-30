@@ -244,7 +244,7 @@ describe("wormhole-core-v1::update-guardians-set success", () => {
   });
 
   it("should return the set 1 as active", () => {
-    let res = simnet.callPublicFn(
+    let res = simnet.callReadOnlyFn(
       contractName,
       `get-active-guardian-set`,
       [],
@@ -313,7 +313,7 @@ describe("wormhole-core-v1::update-guardians-set success", () => {
       }),
     );
 
-    res = simnet.callPublicFn(
+    res = simnet.callReadOnlyFn(
       contractName,
       `get-active-guardian-set`,
       [],

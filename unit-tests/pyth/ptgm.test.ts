@@ -282,6 +282,10 @@ describe("pyth-governance-v1::update-prices-data-sources", () => {
       chain: 6,
       address: Buffer.alloc(32),
     },
+    {
+      chain: 7,
+      address: Buffer.alloc(32),
+    },
   ];
   let ptgmVaaPayload = pyth.buildPtgmVaaPayload({ updatePricesDataSources });
 
@@ -295,9 +299,12 @@ describe("pyth-governance-v1::update-prices-data-sources", () => {
     );
   });
 
-  it("should update fee-info on successful updates", () => {
+  it("should update prices data sources on successful updates", () => {
     let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
-    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let body = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.InitialGovernanceDataSource,
+    });
     let header = wormhole.buildValidVaaHeader(guardianSet, body, {
       version: 1,
       guardianSetId: 1,

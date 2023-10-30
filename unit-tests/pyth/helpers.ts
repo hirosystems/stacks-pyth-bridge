@@ -4,9 +4,7 @@ import {
   ClarityValue,
   contractPrincipalCV,
   cvToHex,
-  cvToValue,
   principalCV,
-  publicKeyToAddress,
 } from "@stacks/transactions";
 import { bigintToBuffer, bufferToBigint } from "../utils/helpers";
 import * as secp from "@noble/secp256k1";
@@ -17,6 +15,8 @@ if (!globalThis.crypto) globalThis.crypto = webcrypto;
 
 import { hmac } from "@noble/hashes/hmac";
 import { sha256 } from "@noble/hashes/sha256";
+import { wormhole } from "../wormhole/helpers";
+import { hexToBytes } from "@noble/hashes/utils";
 
 secp.etc.hmacSha256Sync = (k, ...m) =>
   hmac(sha256, k, secp.etc.concatBytes(...m));
@@ -54,6 +54,36 @@ export namespace pyth {
     "56a3121958b01f99fdc4e1fd01e81050602c7ace3a571918bb55c6a96657cca9",
     "hex",
   );
+
+  export const PnauMagicBytes = new Uint8Array(Buffer.from("504e4155", "hex"));
+  export const AuwvMagicBytes = new Uint8Array(Buffer.from("41555756", "hex"));
+  export const PgtmMagicBytes = new Uint8Array(Buffer.from("5054474d", "hex"));
+  export const InitialGovernanceDataSource = {
+    chain: 0,
+    address: hexToBytes(
+      "0000000000000000000000000000000000000000000000000000000000000000",
+    ),
+  };
+  export const DefaultGovernanceDataSource = {
+    chain: 1,
+    address: hexToBytes(
+      "0000000000000000000000000000000000000000000000000000000000000001",
+    ),
+  };
+  export const DefaultPricesDataSources = [
+    {
+      chain: 2,
+      address: hexToBytes(
+        "0000000000000000000000000000000000000000000000000000000000000004",
+      ),
+    },
+    {
+      chain: 3,
+      address: hexToBytes(
+        "0000000000000000000000000000000000000000000000000000000000000006",
+      ),
+    },
+  ];
 
   export interface PriceUpdate {
     priceIdentifier: Uint8Array;
@@ -96,12 +126,15 @@ export namespace pyth {
     magicBytes: Uint8Array;
     module: number;
     action: number;
-    chainId: number;
+    targetChainId: number;
     updateFeeValue?: PtgmUpdateFeeValue;
     updateFeeRecipient?: PtgmUpdateFeeRecipient;
-    updateWormholeContract?: PtgmUpdateWormholeContract;
-    updateOracleContract?: PtgmUpdateOracleContract;
-    updatePricesDataSources?: PtgmUpdatePriceDataSource[];
+    updateWormholeContract?: PtgmUpdateContract;
+    updateOracleContract?: PtgmUpdateContract;
+    updateStoreContract?: PtgmUpdateContract;
+    updateDecoderContract?: PtgmUpdateContract;
+    updatePricesDataSources?: wormhole.Emitter[];
+    updateGovernanceDataSource?: wormhole.Emitter;
   }
 
   export interface PtgmUpdateFeeValue {
@@ -109,22 +142,12 @@ export namespace pyth {
     exponent: bigint;
   }
 
-  export interface PtgmUpdatePriceDataSource {
-    chain: number;
-    address: Uint8Array;
-  }
-
   export interface PtgmUpdateFeeRecipient {
     address: string;
     contractName?: string;
   }
 
-  export interface PtgmUpdateWormholeContract {
-    address: string;
-    contractName: string;
-  }
-
-  export interface PtgmUpdateOracleContract {
+  export interface PtgmUpdateContract {
     address: string;
     contractName: string;
   }
@@ -133,12 +156,15 @@ export namespace pyth {
     magicBytes?: Uint8Array;
     module?: number;
     action?: number;
-    chainId?: number;
+    targetChainId?: number;
     updateFeeValue?: PtgmUpdateFeeValue;
     updateFeeRecipient?: PtgmUpdateFeeRecipient;
-    updateWormholeContract?: PtgmUpdateWormholeContract;
-    updatePricesDataSources?: PtgmUpdatePriceDataSource[];
-    updateOracleContract?: PtgmUpdateOracleContract;
+    updatePricesDataSources?: wormhole.Emitter[];
+    updateWormholeContract?: PtgmUpdateContract;
+    updateOracleContract?: PtgmUpdateContract;
+    updateStoreContract?: PtgmUpdateContract;
+    updateDecoderContract?: PtgmUpdateContract;
+    updateGovernanceDataSource?: wormhole.Emitter;
   }
 
   export interface PnauHeader {
@@ -239,22 +265,30 @@ export namespace pyth {
       action = 0x00;
     } else if (opts?.updateWormholeContract) {
       action = 0x06;
+    } else if (opts?.updateDecoderContract) {
+      action = 0xa2;
+    } else if (opts?.updateStoreContract) {
+      action = 0xa1;
     } else if (opts?.updatePricesDataSources) {
       action = 0x02;
+    } else if (opts?.updateGovernanceDataSource) {
+      action = 0x01;
     } else {
       throw "PTGM action unsupported";
     }
     return {
-      magicBytes:
-        opts?.magicBytes || new Uint8Array(Buffer.from("5054474d", "hex")),
+      magicBytes: opts?.magicBytes || PgtmMagicBytes,
       action,
-      chainId: opts?.chainId || 0,
+      targetChainId: opts?.targetChainId || 0,
       module: opts?.module || 0,
       updateFeeRecipient: opts?.updateFeeRecipient,
       updateFeeValue: opts?.updateFeeValue,
       updateOracleContract: opts?.updateOracleContract,
       updateWormholeContract: opts?.updateWormholeContract,
       updatePricesDataSources: opts?.updatePricesDataSources,
+      updateDecoderContract: opts?.updateDecoderContract,
+      updateGovernanceDataSource: opts?.updateGovernanceDataSource,
+      updateStoreContract: opts?.updateStoreContract,
     };
   }
 
@@ -273,8 +307,8 @@ export namespace pyth {
     v.writeUint8(payload.action, 0);
     components.push(v);
     // Chain id
-    v = Buffer.alloc(2);
-    v.writeUint8(payload.chainId, 0);
+    v = Buffer.alloc(1);
+    v.writeUint8(payload.targetChainId, 0);
     components.push(v);
 
     if (payload.updateFeeValue) {
@@ -303,6 +337,25 @@ export namespace pyth {
         payload.updateWormholeContract.contractName,
       );
       components.push(clarityValueToBuffer(principal));
+    } else if (payload.updateStoreContract) {
+      let principal = contractPrincipalCV(
+        payload.updateStoreContract.address,
+        payload.updateStoreContract.contractName,
+      );
+      components.push(clarityValueToBuffer(principal));
+    } else if (payload.updateDecoderContract) {
+      let principal = contractPrincipalCV(
+        payload.updateDecoderContract.address,
+        payload.updateDecoderContract.contractName,
+      );
+      components.push(clarityValueToBuffer(principal));
+    } else if (payload.updateGovernanceDataSource) {
+      // Chain id
+      v = Buffer.alloc(2);
+      v.writeUint16BE(payload.updateGovernanceDataSource.chain, 0);
+      components.push(v);
+      // Address
+      components.push(payload.updateGovernanceDataSource.address);
     } else if (payload.updatePricesDataSources) {
       // Nuber of updates
       v = Buffer.alloc(1);
@@ -311,8 +364,8 @@ export namespace pyth {
 
       for (let dataSource of payload.updatePricesDataSources) {
         // Chain
-        v = Buffer.alloc(1);
-        v.writeUint8(dataSource.chain, 0);
+        v = Buffer.alloc(2);
+        v.writeUint16BE(dataSource.chain, 0);
         components.push(v);
         // Address
         components.push(dataSource.address);
@@ -379,7 +432,7 @@ export namespace pyth {
 
   export function buildAuwvVaaPayload(
     batch: PriceUpdateBatch,
-    merkleRootData?: AuwvVaaPayloadBuildOptions,
+    auwvBuildOptions?: AuwvVaaPayloadBuildOptions,
   ) {
     let merkleLeaves = [...batch.hashed];
     // Compute merkle tree
@@ -396,20 +449,17 @@ export namespace pyth {
     }
 
     return {
-      payloadType:
-        merkleRootData?.payloadType ||
-        new Uint8Array(Buffer.from("41555756", "hex")),
-      updateType: merkleRootData?.updateType || 0,
-      merkleRootRingSize: merkleRootData?.merkleRootRingSize || 0,
-      merkleRootSlot: merkleRootData?.merkleRootSlot || 0n,
+      payloadType: auwvBuildOptions?.payloadType || AuwvMagicBytes,
+      updateType: auwvBuildOptions?.updateType || 0,
+      merkleRootRingSize: auwvBuildOptions?.merkleRootRingSize || 0,
+      merkleRootSlot: auwvBuildOptions?.merkleRootSlot || 0n,
       merkleRootHash: merkleLeaves[0],
     };
   }
 
   export function buildPnauHeader(opts?: PnauHeaderBuildOptions) {
     return {
-      magicBytes:
-        opts?.magicBytes || new Uint8Array(Buffer.from("504e4155", "hex")),
+      magicBytes: opts?.magicBytes || PnauMagicBytes,
       versionMaj: opts?.versionMaj || 1,
       versionMin: opts?.versionMin || 0,
       trailingSize: opts?.trailingSize || 0,
@@ -530,6 +580,72 @@ export namespace pyth {
       publishTime: opts?.publishTime || 10000001n,
       prevPublishTime: opts?.prevPublishTime || 10000000n,
     };
+  }
+
+  export function applyGovernanceDataSourceUpdate(
+    updateGovernanceDataSource: wormhole.Emitter,
+    emitter: wormhole.Emitter,
+    guardianSet: wormhole.Guardian[],
+    txSenderAddress: string,
+    pythGovernanceContractName: string,
+    wormholeCoreContractName: string,
+    sequence: bigint,
+  ) {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateGovernanceDataSource,
+    });
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload, sequence, emitter });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-governance-data-source`,
+      [Cl.buffer(vaa), wormholeContract],
+      txSenderAddress,
+    );
+
+    return res;
+  }
+
+  export function applyPricesDataSourceUpdate(
+    updatePricesDataSources: wormhole.Emitter[],
+    emitter: wormhole.Emitter,
+    guardianSet: wormhole.Guardian[],
+    txSenderAddress: string,
+    pythGovernanceContractName: string,
+    wormholeCoreContractName: string,
+    sequence: bigint,
+  ) {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({ updatePricesDataSources });
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload, sequence, emitter });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-prices-data-sources`,
+      [Cl.buffer(vaa), wormholeContract],
+      txSenderAddress,
+    );
+
+    return res;
   }
 
   export namespace fc_ext {

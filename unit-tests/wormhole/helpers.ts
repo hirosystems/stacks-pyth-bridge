@@ -11,6 +11,7 @@ if (!globalThis.crypto) globalThis.crypto = webcrypto;
 import { hmac } from "@noble/hashes/hmac";
 import { sha256 } from "@noble/hashes/sha256";
 import { gsuMainnetVaas } from "./fixtures";
+import { pyth } from "../pyth/helpers";
 
 secp.etc.hmacSha256Sync = (k, ...m) =>
   hmac(sha256, k, secp.etc.concatBytes(...m));
@@ -42,6 +43,11 @@ export namespace wormhole {
     }
     return keychain;
   };
+
+  export interface Emitter {
+    chain: number;
+    address: Uint8Array;
+  }
 
   export interface VaaHeader {
     version: number;
@@ -298,17 +304,21 @@ export namespace wormhole {
 
   export const buildValidVaaBodySpecs = (opts?: {
     payload?: Uint8Array;
+    emitter?: Emitter;
+    sequence?: bigint;
   }): VaaBody => {
     const date = Math.floor(Date.now() / 1000);
     const timestamp = date >>> 0;
     const payload =
       (opts && opts.payload && opts.payload) || new Uint8Array(32);
+    let emitter =
+      opts && opts.emitter ? opts.emitter : pyth.InitialGovernanceDataSource;
     let values = {
       timestamp: timestamp,
       nonce: 0,
-      emitterChain: 0,
-      emitterAddress: new Uint8Array(32),
-      sequence: 0n,
+      emitterChain: emitter.chain,
+      emitterAddress: emitter.address,
+      sequence: opts && opts.sequence ? opts.sequence : 1n,
       consistencyLevel: 0,
       payload: payload,
     };
@@ -444,7 +454,7 @@ export namespace wormhole {
     keychain: wormhole.Guardian[],
     guardianSetId: number,
     txSenderAddress: string,
-    contract_name: string,
+    contractName: string,
   ) {
     let guardianRotationPayload =
       wormhole.serializeGuardianUpdateVaaPayloadToBuffer(
@@ -468,7 +478,7 @@ export namespace wormhole {
     }
     let result = simnet.mineBlock([
       tx.callPublicFn(
-        contract_name,
+        contractName,
         `update-guardians-set`,
         [Cl.buffer(vaa), Cl.list(uncompressedPublicKey)],
         txSenderAddress,
