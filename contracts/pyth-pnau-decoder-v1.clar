@@ -28,14 +28,20 @@
 (define-constant ERR_VERSION_MIN (err u2003))
 ;; Unable to parse trailing header size
 (define-constant ERR_HEADER_TRAILING_SIZE (err u2004))
-;; Unable to parse update type
+;; Unable to parse proof type
 (define-constant ERR_PROOF_TYPE (err u2005))
+;; Unable to parse update type
+(define-constant ERR_UPDATE_TYPE (err u2006))
 ;; Merkle root mismatch
-(define-constant MERKLE_ROOT_MISMATCH (err u2006))
+(define-constant ERR_INVALID_AUWV (err u2007))
+;; Merkle root mismatch
+(define-constant MERKLE_ROOT_MISMATCH (err u2008))
 ;; Price not found
 (define-constant ERR_NOT_FOUND (err u0))
 ;; Price not found
 (define-constant ERR_UNAUTHORIZED_FLOW (err u2404))
+;; Price update not signed by an authorized source 
+(define-constant ERR_UNAUTHORIZED_PRICE_UPDATE (err u2401))
 
 ;;;; Public functions
 (define-public (decode-and-verify-price-feeds (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
@@ -47,31 +53,36 @@
       (ok prices-updates))))
 
 ;;;; Private functions
-;; Note: wormhole-core-address is checked upstream so we will ignore the following warning
 ;; #[filter(pnau-bytes, wormhole-core-address)]
 (define-private (decode-pnau-price-update (pnau-bytes (buff 8192)) (wormhole-core-address <wormhole-core-trait>))
-    (let ((cursor-pnau-header (try! (parse-pnau-header pnau-bytes)))
-          (cursor-pnau-vaa-size (try! (contract-call? .hk-cursor-v1 read-uint-16 (get next cursor-pnau-header))))
-          (cursor-pnau-vaa (try! (contract-call? .hk-cursor-v1 read-buff-8192-max (get next cursor-pnau-vaa-size) (some (get value cursor-pnau-vaa-size)))))
-          (vaa (try! (contract-call? wormhole-core-address parse-and-verify-vaa (get value cursor-pnau-vaa))))
-          (cursor-merkle-root-data (try! (parse-merkle-root-data-from-vaa-payload (get payload vaa))))
-          (decoded-prices-updates (try! (parse-and-verify-prices-updates 
-            (contract-call? .hk-cursor-v1 slice (get next cursor-pnau-vaa) none)
-            (get merkle-root-hash (get value cursor-merkle-root-data)))))
-          (prices-updates (map cast-decoded-price decoded-prices-updates)))
-      (ok prices-updates)))
+  (let ((cursor-pnau-header (try! (parse-pnau-header pnau-bytes)))
+        (cursor-pnau-vaa-size (try! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-16 (get next cursor-pnau-header))))
+        (cursor-pnau-vaa (try! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-8192-max (get next cursor-pnau-vaa-size) (some (get value cursor-pnau-vaa-size)))))
+        (vaa (try! (contract-call? wormhole-core-address parse-and-verify-vaa (get value cursor-pnau-vaa))))
+        (cursor-merkle-root-data (try! (parse-merkle-root-data-from-vaa-payload (get payload vaa))))
+        (decoded-prices-updates (try! (parse-and-verify-prices-updates 
+          (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 slice (get next cursor-pnau-vaa) none)
+          (get merkle-root-hash (get value cursor-merkle-root-data)))))
+        (prices-updates (map cast-decoded-price decoded-prices-updates))
+        (authorized-prices-data-sources (contract-call? .pyth-governance-v1 get-authorized-prices-data-sources)))
+    ;; Ensure that update was published by an data source authorized by governance
+    (unwrap! (index-of? 
+        authorized-prices-data-sources 
+        { emitter-chain: (get emitter-chain vaa), emitter-address: (get emitter-address vaa) }) 
+      ERR_UNAUTHORIZED_PRICE_UPDATE)
+    (ok prices-updates)))
 
 (define-private (parse-merkle-root-data-from-vaa-payload (payload-vaa-bytes (buff 8192)))
-  (let ((cursor-payload-type (unwrap! (contract-call? .hk-cursor-v1 read-buff-4 { bytes: payload-vaa-bytes, pos: u0 }) 
-          (err u0)))
-        (cursor-wh-update-type (unwrap! (contract-call? .hk-cursor-v1 read-uint-8 (get next cursor-payload-type)) 
-          (err u0)))
-        (cursor-merkle-root-slot (unwrap! (contract-call? .hk-cursor-v1 read-uint-64 (get next cursor-wh-update-type)) 
-          (err u0)))
-        (cursor-merkle-root-ring-size (unwrap! (contract-call? .hk-cursor-v1 read-uint-32 (get next cursor-merkle-root-slot)) 
-          (err u0)))
-        (cursor-merkle-root-hash (unwrap! (contract-call? .hk-cursor-v1 read-buff-20 (get next cursor-merkle-root-ring-size)) 
-          (err u0))))
+  (let ((cursor-payload-type (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-4 { bytes: payload-vaa-bytes, pos: u0 }) 
+          ERR_INVALID_AUWV))
+        (cursor-wh-update-type (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-payload-type)) 
+          ERR_INVALID_AUWV))
+        (cursor-merkle-root-slot (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-64 (get next cursor-wh-update-type)) 
+          ERR_INVALID_AUWV))
+        (cursor-merkle-root-ring-size (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-32 (get next cursor-merkle-root-slot)) 
+          ERR_INVALID_AUWV))
+        (cursor-merkle-root-hash (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-20 (get next cursor-merkle-root-ring-size)) 
+          ERR_INVALID_AUWV)))
     ;; Check payload type
     (asserts! (is-eq (get value cursor-payload-type) AUWV_MAGIC) ERR_MAGIC_BYTES)
     ;; Check update type
@@ -215,6 +226,8 @@
               bytes: proof-bytes,
               limit: (get value cursor-proof-size)
             }))))
+        ;; Check cursor-message-type
+        (unwrap-panic (if (is-eq (get value cursor-message-type) u0) (ok true) (err ERR_UPDATE_TYPE)))
         {
           cursor: { 
             index: (+ (get index (get cursor acc)) u1),
