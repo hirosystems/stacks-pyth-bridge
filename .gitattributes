@@ -1,1 +1,2 @@
-tests/* linguist-vendored
+unit-tests/* linguist-vendored
+* text=lf
