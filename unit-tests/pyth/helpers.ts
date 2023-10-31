@@ -61,26 +61,26 @@ export namespace pyth {
   export const InitialGovernanceDataSource = {
     chain: 0,
     address: hexToBytes(
-      "0000000000000000000000000000000000000000000000000000000000000000",
+      "5635979a221c34931e32620b9293a463065555ea71fe97cd6237ade875b12e9e",
     ),
   };
   export const DefaultGovernanceDataSource = {
-    chain: 1,
+    chain: 99,
     address: hexToBytes(
-      "0000000000000000000000000000000000000000000000000000000000000001",
+      "00000000000000000000000000000000000000000000000000000000000000FF",
     ),
   };
   export const DefaultPricesDataSources = [
     {
-      chain: 2,
+      chain: 1,
       address: hexToBytes(
-        "0000000000000000000000000000000000000000000000000000000000000004",
+        "6bb14509a612f01fbbc4cffeebd4bbfb492a86df717ebe92eb6df432a3f00a25",
       ),
     },
     {
-      chain: 3,
+      chain: 26,
       address: hexToBytes(
-        "0000000000000000000000000000000000000000000000000000000000000006",
+        "f8cd23c2ab91237730770bbea08d61005cdda0984348f3f6eecb559638c0bba0",
       ),
     },
   ];

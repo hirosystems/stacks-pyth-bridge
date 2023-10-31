@@ -107,7 +107,7 @@
 ;; @param vaa-bytes: 
 (define-read-only (parse-vaa (vaa-bytes (buff 8192)))
   (let ((cursor-version (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 { bytes: vaa-bytes, pos: u0 }) 
-           ERR_VAA_PARSING_VERSION))
+          ERR_VAA_PARSING_VERSION))
         (cursor-guardian-set-id (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-32 (get next cursor-version)) 
           ERR_VAA_PARSING_GUARDIAN_SET))
         (cursor-signatures-len (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-guardian-set-id)) 
@@ -176,7 +176,7 @@
       (asserts! (is-eq (get version (get vaa message)) u1) 
         ERR_VAA_CHECKS_VERSION_UNSUPPORTED)
       ;; Ensure that the count of valid signatures is >= 13
-      (asserts! (>= (len (get result signatures-from-active-guardians)) QUORUM) 
+      (asserts! (>= (len (get result signatures-from-active-guardians)) QUORUM)
         ERR_VAA_CHECKS_THRESHOLD_SIGNATURE)
       ;; Good to go!
       (ok (get vaa message)))))
@@ -206,8 +206,9 @@
     (var-set guardian-set-initialized true)
     ;; Emit Event
     (print { 
-      object: "guardian-set", 
-      action: "updated", 
+      type: "guardian-set", 
+      action: "updated",
+      id: set-id,
       data: { guardians-eth-addresses: eth-addresses, guardians-public-keys: uncompressed-public-keys }})
     (ok {
       vaa: vaa,
@@ -293,9 +294,11 @@
 
 ;; @desc Convert an uncompressed public key (64 bytes) into a compressed public key (33 bytes)
 (define-private (compress-public-key (uncompressed-public-key (buff 64)))
-      (let ((x-coordinate (unwrap-panic (slice? uncompressed-public-key u0 u32)))
-            (y-coordinate-parity (buff-to-uint-be (unwrap-panic (element-at? uncompressed-public-key u63)))))
-        (unwrap-panic (as-max-len? (concat (if (is-eq (mod y-coordinate-parity u2) u0) 0x02 0x03) x-coordinate) u33))))
+  (if (is-eq 0x uncompressed-public-key) 
+    0x 
+    (let ((x-coordinate (unwrap-panic (slice? uncompressed-public-key u0 u32)))
+          (y-coordinate-parity (buff-to-uint-be (unwrap-panic (element-at? uncompressed-public-key u63)))))
+      (unwrap-panic (as-max-len? (concat (if (is-eq (mod y-coordinate-parity u2) u0) 0x02 0x03) x-coordinate) u33)))))
 
 (define-private (is-eth-address-matching-public-key (uncompressed-public-key (buff 64)) (eth-address (buff 20)))
   (is-eq (unwrap-panic (slice? (keccak256 uncompressed-public-key) u12 u32)) eth-address))

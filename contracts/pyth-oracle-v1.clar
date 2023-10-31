@@ -10,7 +10,7 @@
 ;; Generic error
 (define-constant ERR_PANIC (err u0))
 ;; Balance insufficient for handling fee
-(define-constant ERR_BALANCE_INSUFFICIENT (err u4002))
+(define-constant ERR_BALANCE_INSUFFICIENT (err u402))
 
 (define-public (read-price-feed 
     (price-feed-id (buff 32))

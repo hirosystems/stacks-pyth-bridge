@@ -47,18 +47,21 @@
 ;; Error parsing PGTM
 (define-constant ERR_INVALID_PTGM (err u4007))
 
+(define-data-var governance-data-source 
+  { emitter-chain: uint, emitter-address: (buff 32) }
+  { emitter-chain: u0, emitter-address: 0x5635979a221c34931e32620b9293a463065555ea71fe97cd6237ade875b12e9e })
+(define-data-var prices-data-sources 
+  (list 255 { emitter-chain: uint, emitter-address: (buff 32) })
+  (list
+    { emitter-chain: u1, emitter-address: 0x6bb14509a612f01fbbc4cffeebd4bbfb492a86df717ebe92eb6df432a3f00a25 }
+    { emitter-chain: u26, emitter-address: 0xf8cd23c2ab91237730770bbea08d61005cdda0984348f3f6eecb559638c0bba0 }
+    { emitter-chain: u26, emitter-address: 0xe101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71 }))
 (define-data-var fee-value 
   { mantissa: uint, exponent: uint } 
   { mantissa: u1, exponent: u1 })
-(define-data-var price-data-sources (buff 32) 0x)
-(define-data-var governance-data-source 
-  { emitter-chain: uint, emitter-address: (buff 32) }
-  { emitter-chain: u0, emitter-address: 0x0000000000000000000000000000000000000000000000000000000000000000 }) ;; TODO: set initial value
 (define-data-var fee-recipient-address principal tx-sender)
-
 (define-data-var last-sequence-processed uint u0) ;; TODO: set initial value
 
-(define-data-var prices-data-sources (list 255 { emitter-chain: uint, emitter-address: (buff 32) }) (list))
 
 (define-map execution-plans uint { 
   pyth-oracle-contract: principal,
