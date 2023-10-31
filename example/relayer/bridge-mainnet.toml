@@ -1,6 +1,6 @@
 [pyth]
 network = "mainnet"
-price_service_url = "https://xc-mainnet.pyth.network"
+price_service_url = "https://hermes.pyth.network"
 price_feeds_ids = [
     "0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17", # STX-USD (mainnet)
     "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43", # BTC-USD (mainnet)
@@ -19,7 +19,7 @@ start_block = 6
 [bridge]
 price_updates_per_minute = 5
 enable_rbf = true
-enable_microbloks = true
+enable_microblocks = true
 
 [event_observer]
 ingestion_port = 20456
