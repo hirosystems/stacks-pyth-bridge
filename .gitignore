@@ -3,7 +3,7 @@
 **/settings/Testnet.toml
 **/.cache/**
 history.txt
-relayer/target
+example/relayer/target
 .DS_Store
 node_modules
 
