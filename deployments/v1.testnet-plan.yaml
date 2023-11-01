@@ -1,90 +1,66 @@
 ---
 id: 0
-name: Devnet deployment
-network: devnet
-stacks-node: "http://localhost:20443"
-bitcoin-node: "http://devnet:devnet@localhost:18443"
+name: Testnet deployment
+network: testnet
+stacks-node: "https://api.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
 plan:
   batches:
     - id: 0
       transactions:
-        - requirement-publish:
-            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2
-            remap-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            remap-principals:
-              SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 64640
-            path: "./.cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2.clar"
-            clarity-version: 2
-        - requirement-publish:
-            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-ecc-v1
-            remap-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            remap-principals:
-              SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 9440
-            path: "./.cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-ecc-v1.clar"
-            clarity-version: 2
-        - requirement-publish:
-            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-merkle-tree-keccak160-v1
-            remap-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            remap-principals:
-              SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 11000
-            path: "./.cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-merkle-tree-keccak160-v1.clar"
-            clarity-version: 2
         - contract-publish:
             contract-name: wormhole-traits-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 4920
+            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
+            cost: 2899063
             path: contracts/wormhole/wormhole-traits-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-traits-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 16340
+            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
+            cost: 2899963
             path: contracts/pyth-traits-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-governance-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 226570
+            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
+            cost: 2918145
             path: contracts/pyth-governance-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-oracle-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 21680
+            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
+            cost: 2900503
             path: contracts/pyth-oracle-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-pnau-decoder-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 160350
+            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
+            cost: 2912384
             path: contracts/pyth-pnau-decoder-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-store-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 22430
+            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
+            cost: 2900503
             path: contracts/pyth-store-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: wormhole-core-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 197240
+            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
+            cost: 2915625
             path: contracts/wormhole/wormhole-core-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-helper-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 4420
+            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
+            cost: 2899063
             path: contracts/pyth-helper-v1.clar
             anchor-block-only: true
             clarity-version: 2

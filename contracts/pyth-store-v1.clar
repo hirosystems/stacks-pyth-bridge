@@ -60,6 +60,11 @@
             publish-time: (get publish-time entry),
             prev-publish-time: (get prev-publish-time entry)
           })
+        (print {
+          type: "price-feed", 
+          action: "updated", 
+          data: entry
+        })
         (map-set timestamps (get price-identifier entry) (get publish-time entry))
         u1)
       u0))

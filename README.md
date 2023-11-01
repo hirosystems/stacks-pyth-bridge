@@ -122,10 +122,10 @@ The operator will start fetching prices from the Pyth network Price API and subm
 
 ### Onchain
 
-The `pyth-oracle-v1` contract is exposing the following read-only method:
+The `pyth-helper-v1` contract is exposing the following method:
 
 ```clarity
-(define-read-only (read-price-feed 
+(define-public (read-price 
     (price-feed-id (buff 32))))
 ```
  
@@ -133,8 +133,8 @@ That can be consumed with the following invocation:
 
 ```clarity
 (contract-call? 
-    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-oracle-v1  ;; Address of the oracle contract
-    read-price-feed
+    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-helper-v1  ;; Address of the helper contract
+    read-price
     0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b)
 ```
 
@@ -142,46 +142,31 @@ The authenticity of the price feeds is verified during their ingestion, making t
 
 Each Pyth Network price feed is referred to via a unique ID. Price feeds also have different IDs in mainnets than testnets or devnets. The full list of price feeds is listed on the [pyth.network website](https://pyth.network/price-feeds/). The price feed IDs page lists the ID of each available price feed on every chain where they are available. To use a price feed on-chain, look up its ID using these pages, then store the feed ID in your program for price feed queries.
 
-Price Feeds usage and best practices are described on the [pyth.network developer documentation website](https://docs.pyth.network/documentation/pythnet-price-feeds/best-practices).
+Price Feed usage and best practices are described on the [pyth.network developer documentation website](https://docs.pyth.network/documentation/pythnet-price-feeds/best-practices).
 
+#### Prices currently supported on Testnet and Mainnet
 
-#### Prices currently supported on Testnet
-
-| Pair    | Price Feed ID |
-|---------|--------------------------------------------------------------------|
-| STX-USD | 0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17 |
-
-#### Prices currently supported on Mainnet
-
-| Pair    | Price Feed ID |
-|---------|--------------------------------------------------------------------|
-| STX-USD | 0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17 |
-| BTC-USD | 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43 |
-| ETH-USD | 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace |
-
-Feel free to open an issue on this repo if more prices are required for your application. The full list of prices is available [here](https://pyth.network/price-feeds/).
+The full list of prices is available [here](https://pyth.network/price-feeds/).
 
 ### Offchain
 
-For every new price recorded and stored on chain, the `pyth-oracle-v1` is emitting an event with the following shape:
+For every new price recorded and stored on chain, the `pyth-store-v1` is emitting an event with the following shape:
 
 ```clarity
-(print { 
-    type: "price-feed", 
-    action: "updated", 
-    data: { 
-        attestation-time: u1686854317, 
-        conf: u2064471426, 
-        ema-conf: u1891952230, 
-        ema-price: 2507095440000, 
-        expo: 4294967288, 
-        prev-conf: u2064471426, 
-        prev-price: 2515455528574, 
-        prev-publish-time: u1686854316, 
-        price: 2515455528574, 
-        publish-time: u1686854317, 
-        status: u1
-     } })
+{
+  type: "price-feed",
+  action: "updated",
+  data: {
+    price-identifier: 0xec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17,
+    price: 46098556,
+    conf: u37359,
+    ema-price: 46167004,
+    ema-conf: u36191,
+    expo: -8,
+    publish-time: u1695751649,
+    prev-publish-time: u1695751648
+  }
+}
 ```
 
 These events can be observed using [Chainhook](https://github.com/hirosystems/chainhook), using the `print` predicates.
