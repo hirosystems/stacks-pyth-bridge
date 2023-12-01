@@ -5,6 +5,10 @@
 
 (impl-trait .pyth-traits-v1.storage-trait)
 
+(define-constant ERR_NEWER_PRICE_AVAILABLE (err u5000))
+(define-constant ERR_STALE_PRICE (err u5001))
+(define-constant ERR_INVALID_UPDATES (err u5003))
+
 (define-map prices (buff 32) {
   price: int,
   conf: uint,
@@ -31,11 +35,12 @@
     publish-time: uint,
     prev-publish-time: uint,
   })))
-  (begin
+  (let ((successful-updates (map unwrapped-entry (filter only-ok-entry (map write-batch-entry batch-updates)))))
     ;; Ensure that updates are always coming from the right contract
     (try! (contract-call? .pyth-governance-v1 check-execution-flow contract-caller none))
-    ;; Update storage, count the number of updates
-    (ok (fold + (map write-batch-entry batch-updates) u0))))
+    ;; Ensure we have at least one entry
+    (asserts! (> (len successful-updates) u0) ERR_INVALID_UPDATES)
+    (ok successful-updates)))
 
 (define-private (write-batch-entry (entry {
       price-identifier: (buff 32),
@@ -46,28 +51,56 @@
       ema-conf: uint,
       publish-time: uint,
       prev-publish-time: uint,
-    })) 
-    (if (is-price-update-more-recent (get price-identifier entry) (get publish-time entry))
-      (begin 
-        (map-set prices 
-          (get price-identifier entry) 
-          {
-            price: (get price entry),
-            conf: (get conf entry),
-            expo: (get expo entry),
-            ema-price: (get ema-price entry),
-            ema-conf: (get ema-conf entry),
-            publish-time: (get publish-time entry),
-            prev-publish-time: (get prev-publish-time entry)
-          })
-        (print {
-          type: "price-feed", 
-          action: "updated", 
-          data: entry
+    }))
+    (let ((stale-price-threshold (contract-call? .pyth-governance-v1 get-stale-price-threshold))
+          (latest-bitcoin-timestamp (unwrap! (get-block-info? time burn-block-height) ERR_STALE_PRICE)))
+      ;; Ensure that we have not processed a newer price
+      (asserts! (is-price-update-more-recent (get price-identifier entry) (get publish-time entry)) ERR_NEWER_PRICE_AVAILABLE)
+      ;; Ensure that price is not stale
+      (asserts! (>= (get publish-time entry) (- latest-bitcoin-timestamp stale-price-threshold)) ERR_STALE_PRICE)
+      ;; Update storage
+      (map-set prices 
+        (get price-identifier entry) 
+        {
+          price: (get price entry),
+          conf: (get conf entry),
+          expo: (get expo entry),
+          ema-price: (get ema-price entry),
+          ema-conf: (get ema-conf entry),
+          publish-time: (get publish-time entry),
+          prev-publish-time: (get prev-publish-time entry)
         })
-        (map-set timestamps (get price-identifier entry) (get publish-time entry))
-        u1)
-      u0))
+      ;; Emit event
+      (print {
+        type: "price-feed", 
+        action: "updated", 
+        data: entry
+      })
+      ;; Update timestamps tracking
+      (map-set timestamps (get price-identifier entry) (get publish-time entry))
+      (ok entry)))
+
+(define-private (only-ok-entry (entry (response {
+    price-identifier: (buff 32),
+    price: int,
+    conf: uint,
+    expo: int,
+    ema-price: int,
+    ema-conf: uint,
+    publish-time: uint,
+    prev-publish-time: uint,
+  } uint))) (is-ok entry))
+
+(define-private (unwrapped-entry (entry (response {
+    price-identifier: (buff 32),
+    price: int,
+    conf: uint,
+    expo: int,
+    ema-price: int,
+    ema-conf: uint,
+    publish-time: uint,
+    prev-publish-time: uint,
+  } uint))) (unwrap-panic entry))
 
 (define-private (is-price-update-more-recent (price-identifier (buff 32)) (publish-time uint))
   (> publish-time (default-to u0 (map-get? timestamps price-identifier))))

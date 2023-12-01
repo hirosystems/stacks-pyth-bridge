@@ -35,12 +35,10 @@
     (let ((pyth-decoder-contract (get pyth-decoder-contract execution-plan))
           (wormhole-core-contract (get wormhole-core-contract execution-plan))
           (pyth-storage-contract (get pyth-storage-contract execution-plan))
-          (prices-updates (try! (contract-call? pyth-decoder-contract decode-and-verify-price-feeds price-feed-bytes wormhole-core-contract)))
+          (decoded-prices (try! (contract-call? pyth-decoder-contract decode-and-verify-price-feeds price-feed-bytes wormhole-core-contract)))
+          (updated-prices (try! (contract-call? pyth-storage-contract write decoded-prices)))
           (fee-info (contract-call? .pyth-governance-v1 get-fee-info))
-          (fee-amount (+ u1 ;; Dust fee 
-                        (* (len prices-updates) (* (get mantissa fee-info) (pow u10 (get exponent fee-info)))))))
+          (fee-amount (* (len updated-prices) (* (get mantissa fee-info) (pow u10 (get exponent fee-info))))))
       ;; Charge fee
       (unwrap! (stx-transfer? fee-amount tx-sender (get address fee-info)) ERR_BALANCE_INSUFFICIENT)
-      ;; Update storage
-      (try! (contract-call? pyth-storage-contract write prices-updates))
-      (ok prices-updates))))
+      (ok updated-prices))))

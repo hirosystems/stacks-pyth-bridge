@@ -308,7 +308,7 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
 
   it("should succeed storing new subsequent updates", () => {
     let actualPricesUpdates = pyth.buildPriceUpdateBatch([
-      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+      [pyth.BtcPriceIdentifier],
       [pyth.StxPriceIdentifier],
       [pyth.BatPriceIdentifer],
       [pyth.DaiPriceIdentifer],
@@ -371,7 +371,7 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
 
   it("should fail if AUWV payloadType is incorrect", () => {
     let actualPricesUpdates = pyth.buildPriceUpdateBatch([
-      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+      [pyth.BtcPriceIdentifier, { price: 100n }],
     ]);
     let actualPricesUpdatesVaaPayload = pyth.buildAuwvVaaPayload(
       actualPricesUpdates,
@@ -407,7 +407,7 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
 
   it("should fail if AUWV updateType is incorrect", () => {
     let actualPricesUpdates = pyth.buildPriceUpdateBatch([
-      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+      [pyth.BtcPriceIdentifier, { price: 100n }],
     ]);
     let actualPricesUpdatesVaaPayload = pyth.buildAuwvVaaPayload(
       actualPricesUpdates,
@@ -443,7 +443,7 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
 
   it("should fail if PNAU magic bytes is incorrect", () => {
     let actualPricesUpdates = pyth.buildPriceUpdateBatch([
-      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+      [pyth.BtcPriceIdentifier, { price: 100n }],
     ]);
     let actualPricesUpdatesVaaPayload =
       pyth.buildAuwvVaaPayload(actualPricesUpdates);
@@ -479,7 +479,7 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
 
   it("should fail if PNAU major version is incorrect", () => {
     let actualPricesUpdates = pyth.buildPriceUpdateBatch([
-      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+      [pyth.BtcPriceIdentifier, { price: 100n }],
     ]);
     let actualPricesUpdatesVaaPayload =
       pyth.buildAuwvVaaPayload(actualPricesUpdates);
@@ -515,7 +515,7 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
 
   it("should fail if PNAU minor version is incorrect", () => {
     let actualPricesUpdates = pyth.buildPriceUpdateBatch([
-      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+      [pyth.BtcPriceIdentifier, { price: 100n }],
     ]);
     let actualPricesUpdatesVaaPayload =
       pyth.buildAuwvVaaPayload(actualPricesUpdates);
@@ -551,7 +551,7 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
 
   it("should fail if PNAU proof type version is incorrect", () => {
     let actualPricesUpdates = pyth.buildPriceUpdateBatch([
-      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+      [pyth.BtcPriceIdentifier, { price: 100n }],
     ]);
     let actualPricesUpdatesVaaPayload =
       pyth.buildAuwvVaaPayload(actualPricesUpdates);
@@ -587,7 +587,7 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
 
   it("should fail if PNAU include Merkle root mismatches", () => {
     let actualPricesUpdates = pyth.buildPriceUpdateBatch([
-      [pyth.BtcPriceIdentifier, { price: 100n, publishTime: 10000003n }],
+      [pyth.BtcPriceIdentifier, { price: 100n }],
     ]);
     let actualPricesUpdatesVaaPayload =
       pyth.buildAuwvVaaPayload(actualPricesUpdates);
@@ -620,5 +620,101 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
       sender,
     );
     expect(res.result).toBeErr(Cl.uint(2008));
+  });
+
+  it("should fail if the price is above stale threshold", () => {
+    let actualPricesUpdates = pyth.buildPriceUpdateBatch([
+      [
+        pyth.BtcPriceIdentifier,
+        {
+          price: 100n,
+          publishTime: pyth.timestampNow() - (5n * 365n * 60n * 60n + 1n),
+        },
+      ],
+    ]);
+    let actualPricesUpdatesVaaPayload =
+      pyth.buildAuwvVaaPayload(actualPricesUpdates);
+    let payload = pyth.serializeAuwvVaaPayloadToBuffer(
+      actualPricesUpdatesVaaPayload,
+    );
+    let vaaBody = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultPricesDataSources[0],
+    });
+    let vaaHeader = wormhole.buildValidVaaHeader(guardianSet, vaaBody, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(vaaHeader, vaaBody);
+    let pnauHeader = pyth.buildPnauHeader();
+    let pnau = pyth.serializePnauToBuffer(pnauHeader, {
+      vaa,
+      pricesUpdates: actualPricesUpdates,
+      pricesUpdatesToSubmit,
+    });
+
+    let res = simnet.callPublicFn(
+      pythOracleContractName,
+      "verify-and-update-price-feeds",
+      [Cl.buffer(pnau), executionPlan],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(5003));
+  });
+
+  it("should only return validated prices and filter invalid prices", () => {
+    let actualPricesUpdates = pyth.buildPriceUpdateBatch([
+      [
+        pyth.BtcPriceIdentifier,
+        {
+          price: 100n,
+          publishTime: pyth.timestampNow() - (5n * 365n * 60n * 60n + 1n),
+        },
+      ],
+      [pyth.StxPriceIdentifier, { price: 100n }],
+    ]);
+    let actualPricesUpdatesVaaPayload =
+      pyth.buildAuwvVaaPayload(actualPricesUpdates);
+    let payload = pyth.serializeAuwvVaaPayloadToBuffer(
+      actualPricesUpdatesVaaPayload,
+    );
+    let vaaBody = wormhole.buildValidVaaBodySpecs({
+      payload,
+      emitter: pyth.DefaultPricesDataSources[0],
+    });
+    let vaaHeader = wormhole.buildValidVaaHeader(guardianSet, vaaBody, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(vaaHeader, vaaBody);
+    let pnauHeader = pyth.buildPnauHeader();
+    let pnau = pyth.serializePnauToBuffer(pnauHeader, {
+      vaa,
+      pricesUpdates: actualPricesUpdates,
+      pricesUpdatesToSubmit,
+    });
+
+    let res = simnet.callPublicFn(
+      pythOracleContractName,
+      "verify-and-update-price-feeds",
+      [Cl.buffer(pnau), executionPlan],
+      sender,
+    );
+    expect(res.result).toBeOk(
+      Cl.list([
+        Cl.tuple({
+          "price-identifier": Cl.buffer(pyth.StxPriceIdentifier),
+          price: Cl.int(actualPricesUpdates.decoded[1].price),
+          conf: Cl.uint(actualPricesUpdates.decoded[1].conf),
+          "ema-conf": Cl.uint(actualPricesUpdates.decoded[1].emaConf),
+          "ema-price": Cl.int(actualPricesUpdates.decoded[1].emaPrice),
+          expo: Cl.int(actualPricesUpdates.decoded[1].expo),
+          "prev-publish-time": Cl.uint(
+            actualPricesUpdates.decoded[1].prevPublishTime,
+          ),
+          "publish-time": Cl.uint(actualPricesUpdates.decoded[1].publishTime),
+        }),
+      ]),
+    );
   });
 });

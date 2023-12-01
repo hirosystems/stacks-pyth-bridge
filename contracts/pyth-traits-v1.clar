@@ -41,7 +41,16 @@
       ema-conf: uint,
       publish-time: uint,
       prev-publish-time: uint,
-    })) (response uint uint))
+    })) (response (list 64 {
+      price-identifier: (buff 32),
+      price: int,
+      conf: uint,
+      expo: int,
+      ema-price: int,
+      ema-conf: uint,
+      publish-time: uint,
+      prev-publish-time: uint,
+    }) uint))
   )
 )
 

@@ -19,6 +19,8 @@
 (define-constant PTGM_UPDATE_PRICES_DATA_SOURCES 0x02)
 ;; Fee is charged when you submit a new price
 (define-constant PTGM_UPDATE_FEE 0x03)
+;; Stale price threshold 
+(define-constant PTGM_STALE_PRICE_THRESHOLD 0x04)
 ;; Upgrade wormhole contract 
 (define-constant PTGM_UPDATE_WORMHOLE_CORE_ADDRESS 0x06)
 ;; Special Stacks operation: update recipient address
@@ -27,10 +29,10 @@
 (define-constant PTGM_UPDATE_PYTH_STORE_ADDRESS 0xa1)
 ;; Special Stacks operation: update decoder contract address
 (define-constant PTGM_UPDATE_PYTH_DECODER_ADDRESS 0xa2)
-;; TODO: Pyth team to assign a chain id to Stacks.
-(define-constant EXPECTED_CHAIN_ID 0x00)
-;; TODO: Pyth team to assign a module to Stacks.
-(define-constant EXPECTED_MODULE 0x00)
+;; Stacks chain id attributed by Pyth
+(define-constant EXPECTED_CHAIN_ID (if is-in-mainnet 0xea86 0xc377))
+;; Stacks module id attributed by Pyth
+(define-constant EXPECTED_MODULE 0x03)
 
 ;; Error unauthorized control flow
 (define-constant ERR_UNAUTHORIZED_ACCESS (err u4004))
@@ -59,27 +61,22 @@
 (define-data-var fee-value 
   { mantissa: uint, exponent: uint } 
   { mantissa: u1, exponent: u1 })
-(define-data-var fee-recipient-address principal tx-sender)
-(define-data-var last-sequence-processed uint u0) ;; TODO: set initial value
+(define-data-var stale-price-threshold uint (if is-in-mainnet (* u2 u60 u60) (* u5 u365 u24 u60 u60))) ;; defaults: 2 hours on Mainnet, 5 years on Testnet
+(define-data-var fee-recipient-address principal (if is-in-mainnet 'SP3CRXBDXQ2N5P7E25Q39MEX1HSMRDSEAP3CFK2Z3 'ST3CRXBDXQ2N5P7E25Q39MEX1HSMRDSEAP1JST19D))
+(define-data-var last-sequence-processed uint u0)
 
-
-(define-map execution-plans uint { 
+;; Execution plan management
+(define-data-var current-execution-plan { 
   pyth-oracle-contract: principal,
   pyth-decoder-contract: principal, 
   pyth-storage-contract: principal,
   wormhole-core-contract: principal
-})
-(define-data-var current-execution-plan-id uint u0)
-
-;; Execution plan management
-;; Initialize governance v1 with v1 contracts 
-(begin
-  (map-insert execution-plans u0 { 
+} { 
     pyth-oracle-contract: .pyth-oracle-v1,
     pyth-decoder-contract: .pyth-pnau-decoder-v1, 
     pyth-storage-contract: .pyth-store-v1,
     wormhole-core-contract: .wormhole-core-v1
-  }))
+})
 
 (define-read-only (check-execution-flow 
   (former-contract-caller principal)
@@ -88,7 +85,7 @@
     pyth-decoder-contract: <pyth-decoder-trait>,
     wormhole-core-contract: <wormhole-core-trait>
   })))
-  (let ((expected-execution-plan (get-current-execution-plan))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (success (if (is-eq contract-caller (get pyth-storage-contract expected-execution-plan))
           ;; The storage contract is checking its execution flow
           ;; Must always be invoked by the proxy
@@ -111,21 +108,24 @@
 
 (define-read-only (check-storage-contract 
   (storage-contract <pyth-storage-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan)))
+  (let ((expected-execution-plan (var-get current-execution-plan)))
       ;; Ensure that storage contract is the one expected
       (expect-active-storage-contract storage-contract expected-execution-plan)))
 
 (define-read-only (get-current-execution-plan)
-  (unwrap-panic (map-get? execution-plans (var-get current-execution-plan-id))))
+  (var-get current-execution-plan))
 
 (define-read-only (get-fee-info)
   (merge (var-get fee-value) { address: (var-get fee-recipient-address) }))
+
+(define-read-only (get-stale-price-threshold)
+  (var-get stale-price-threshold))
 
 (define-read-only (get-authorized-prices-data-sources)
   (var-get prices-data-sources))
 
 (define-public (update-fee-value (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
         (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
     ;; Ensure action's expectation
@@ -139,8 +139,23 @@
       (var-set fee-value updated-data)
       (ok updated-data))))
 
+(define-public (update-stale-price-threshold (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (var-get current-execution-plan))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_STALE_PRICE_THRESHOLD) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update fee-value
+    (let ((updated-data (try! (parse-and-verify-stale-price-threshold (get body ptgm)))))
+      (var-set stale-price-threshold updated-data)
+      (ok updated-data))))
+
 (define-public (update-fee-recipient-address (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
         (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
     ;; Ensure action's expectation
@@ -155,8 +170,7 @@
       (ok updated-data))))
 
 (define-public (update-wormhole-core-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
         (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
     ;; Ensure action's expectation
@@ -167,13 +181,11 @@
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update execution plan
     (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
-      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { wormhole-core-contract: updated-data }))
-      (var-set current-execution-plan-id next-execution-plan-id)
-      (ok (get-current-execution-plan)))))
+      (var-set current-execution-plan (merge expected-execution-plan { wormhole-core-contract: updated-data }))
+      (ok (var-get current-execution-plan)))))
 
 (define-public (update-pyth-oracle-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
         (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
     ;; Ensure action's expectation
@@ -184,13 +196,11 @@
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update execution plan
     (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
-      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-oracle-contract: updated-data }))
-      (var-set current-execution-plan-id next-execution-plan-id)
-      (ok (get-current-execution-plan)))))
+      (var-set current-execution-plan (merge expected-execution-plan { pyth-oracle-contract: updated-data }))
+      (ok (var-get current-execution-plan)))))
 
 (define-public (update-pyth-decoder-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
         (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
     ;; Ensure action's expectation
@@ -201,13 +211,11 @@
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update execution plan
     (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
-      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-decoder-contract: updated-data }))
-      (var-set current-execution-plan-id next-execution-plan-id)
-      (ok (get-current-execution-plan)))))
+      (var-set current-execution-plan (merge expected-execution-plan { pyth-decoder-contract: updated-data }))
+      (ok (var-get current-execution-plan)))))
 
 (define-public (update-pyth-store-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
-        (next-execution-plan-id (+ (var-get current-execution-plan-id) u1))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
         (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
     ;; Ensure action's expectation
@@ -218,12 +226,11 @@
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update execution plan
     (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
-      (map-set execution-plans next-execution-plan-id (merge expected-execution-plan { pyth-storage-contract: updated-data }))
-      (var-set current-execution-plan-id next-execution-plan-id)
-      (ok (get-current-execution-plan)))))
+      (var-set current-execution-plan (merge expected-execution-plan { pyth-storage-contract: updated-data }))
+      (ok (var-get current-execution-plan)))))
 
 (define-public (update-prices-data-sources (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
         (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
     ;; Ensure action's expectation
@@ -238,7 +245,7 @@
       (ok updated-data))))
 
 (define-public (update-governance-data-source (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
-  (let ((expected-execution-plan (get-current-execution-plan))
+  (let ((expected-execution-plan (var-get current-execution-plan))
         (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
         (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
     ;; Ensure action's expectation
@@ -330,7 +337,7 @@
           ERR_INVALID_PTGM))
         (cursor-action (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-1 (get next cursor-module)) 
           ERR_INVALID_PTGM))
-        (cursor-target-chain-id (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-1 (get next cursor-action)) 
+        (cursor-target-chain-id (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-2 (get next cursor-action)) 
           ERR_INVALID_PTGM))
         (cursor-body (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-8192-max (get next cursor-target-chain-id) none)
           ERR_INVALID_PTGM)))
@@ -362,6 +369,12 @@
       mantissa: (get value cursor-mantissa), 
       exponent: (get value cursor-exponent) 
     })))
+
+(define-private (parse-and-verify-stale-price-threshold (ptgm-body (buff 8192)))
+  (let ((cursor-ptgm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new ptgm-body none))
+        (cursor-stale-price-threshold (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-64 (get next cursor-ptgm-body)) 
+          ERR_INVALID_ACTION_PAYLOAD)))
+    (ok (get value cursor-stale-price-threshold))))
 
 (define-private (parse-and-verify-governance-data-source (ptgm-body (buff 8192)))
   (let ((cursor-ptgm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new ptgm-body none))
