@@ -279,8 +279,8 @@ export namespace pyth {
     return {
       magicBytes: opts?.magicBytes || PgtmMagicBytes,
       action,
-      targetChainId: opts?.targetChainId || 0,
-      module: opts?.module || 0,
+      targetChainId: opts?.targetChainId || 50039,
+      module: opts?.module || 3,
       updateFeeRecipient: opts?.updateFeeRecipient,
       updateFeeValue: opts?.updateFeeValue,
       updateOracleContract: opts?.updateOracleContract,
@@ -307,8 +307,8 @@ export namespace pyth {
     v.writeUint8(payload.action, 0);
     components.push(v);
     // Chain id
-    v = Buffer.alloc(1);
-    v.writeUint8(payload.targetChainId, 0);
+    v = Buffer.alloc(2);
+    v.writeUint16BE(payload.targetChainId, 0);
     components.push(v);
 
     if (payload.updateFeeValue) {

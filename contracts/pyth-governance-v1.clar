@@ -27,10 +27,10 @@
 (define-constant PTGM_UPDATE_PYTH_STORE_ADDRESS 0xa1)
 ;; Special Stacks operation: update decoder contract address
 (define-constant PTGM_UPDATE_PYTH_DECODER_ADDRESS 0xa2)
-;; TODO: Pyth team to assign a chain id to Stacks.
-(define-constant EXPECTED_CHAIN_ID 0x00)
-;; TODO: Pyth team to assign a module to Stacks.
-(define-constant EXPECTED_MODULE 0x00)
+;; Stacks chain id attributed by Pyth
+(define-constant EXPECTED_CHAIN_ID (if is-in-mainnet 0xea86 0xc377))
+;; Stacks module id attributed by Pyth
+(define-constant EXPECTED_MODULE 0x03)
 
 ;; Error unauthorized control flow
 (define-constant ERR_UNAUTHORIZED_ACCESS (err u4004))
@@ -59,8 +59,8 @@
 (define-data-var fee-value 
   { mantissa: uint, exponent: uint } 
   { mantissa: u1, exponent: u1 })
-(define-data-var fee-recipient-address principal tx-sender)
-(define-data-var last-sequence-processed uint u0) ;; TODO: set initial value
+(define-data-var fee-recipient-address principal (if is-in-mainnet 'SP3CRXBDXQ2N5P7E25Q39MEX1HSMRDSEAP3CFK2Z3 'ST3CRXBDXQ2N5P7E25Q39MEX1HSMRDSEAP1JST19D))
+(define-data-var last-sequence-processed uint u0)
 
 
 (define-map execution-plans uint { 
@@ -330,7 +330,7 @@
           ERR_INVALID_PTGM))
         (cursor-action (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-1 (get next cursor-module)) 
           ERR_INVALID_PTGM))
-        (cursor-target-chain-id (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-1 (get next cursor-action)) 
+        (cursor-target-chain-id (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-2 (get next cursor-action)) 
           ERR_INVALID_PTGM))
         (cursor-body (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-buff-8192-max (get next cursor-target-chain-id) none)
           ERR_INVALID_PTGM)))
