@@ -129,6 +129,7 @@ export namespace pyth {
     targetChainId: number;
     updateFeeValue?: PtgmUpdateFeeValue;
     updateFeeRecipient?: PtgmUpdateFeeRecipient;
+    updateStalePriceThreshold?: PtgmUpdateStalePriceThreshold;
     updateWormholeContract?: PtgmUpdateContract;
     updateOracleContract?: PtgmUpdateContract;
     updateStoreContract?: PtgmUpdateContract;
@@ -140,6 +141,10 @@ export namespace pyth {
   export interface PtgmUpdateFeeValue {
     mantissa: bigint;
     exponent: bigint;
+  }
+
+  export interface PtgmUpdateStalePriceThreshold {
+    threshold: bigint;
   }
 
   export interface PtgmUpdateFeeRecipient {
@@ -161,6 +166,7 @@ export namespace pyth {
     updateFeeRecipient?: PtgmUpdateFeeRecipient;
     updatePricesDataSources?: wormhole.Emitter[];
     updateWormholeContract?: PtgmUpdateContract;
+    updateStalePriceThreshold?: PtgmUpdateStalePriceThreshold;
     updateOracleContract?: PtgmUpdateContract;
     updateStoreContract?: PtgmUpdateContract;
     updateDecoderContract?: PtgmUpdateContract;
@@ -265,6 +271,8 @@ export namespace pyth {
       action = 0x00;
     } else if (opts?.updateWormholeContract) {
       action = 0x06;
+    } else if (opts?.updateStalePriceThreshold) {
+      action = 0x04;
     } else if (opts?.updateDecoderContract) {
       action = 0xa2;
     } else if (opts?.updateStoreContract) {
@@ -282,6 +290,7 @@ export namespace pyth {
       targetChainId: opts?.targetChainId || 50039,
       module: opts?.module || 3,
       updateFeeRecipient: opts?.updateFeeRecipient,
+      updateStalePriceThreshold: opts?.updateStalePriceThreshold,
       updateFeeValue: opts?.updateFeeValue,
       updateOracleContract: opts?.updateOracleContract,
       updateWormholeContract: opts?.updateWormholeContract,
@@ -349,6 +358,10 @@ export namespace pyth {
         payload.updateDecoderContract.contractName,
       );
       components.push(clarityValueToBuffer(principal));
+    } else if (payload.updateStalePriceThreshold) {
+      components.push(
+        bigintToBuffer(payload.updateStalePriceThreshold.threshold, 8),
+      );
     } else if (payload.updateGovernanceDataSource) {
       // Chain id
       v = Buffer.alloc(2);
@@ -577,9 +590,13 @@ export namespace pyth {
       emaPrice: opts?.emaPrice || 95n,
       emaConf: opts?.emaConf || 9n,
       expo: -4,
-      publishTime: opts?.publishTime || 10000001n,
-      prevPublishTime: opts?.prevPublishTime || 10000000n,
+      publishTime: opts?.publishTime || timestampNow(),
+      prevPublishTime: opts?.prevPublishTime || timestampNow() - 10n,
     };
+  }
+
+  export function timestampNow(): bigint {
+    return BigInt(Math.floor(Date.now() / 1000));
   }
 
   export function applyGovernanceDataSourceUpdate(

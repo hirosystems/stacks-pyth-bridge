@@ -19,6 +19,8 @@
 (define-constant PTGM_UPDATE_PRICES_DATA_SOURCES 0x02)
 ;; Fee is charged when you submit a new price
 (define-constant PTGM_UPDATE_FEE 0x03)
+;; Stale price threshold 
+(define-constant PTGM_STALE_PRICE_THRESHOLD 0x04)
 ;; Upgrade wormhole contract 
 (define-constant PTGM_UPDATE_WORMHOLE_CORE_ADDRESS 0x06)
 ;; Special Stacks operation: update recipient address
@@ -59,6 +61,7 @@
 (define-data-var fee-value 
   { mantissa: uint, exponent: uint } 
   { mantissa: u1, exponent: u1 })
+(define-data-var stale-price-threshold uint (if is-in-mainnet (* u2 u60 u60) (* u5 u365 u24 u60 u60))) ;; defaults: 2 hours on Mainnet, 5 years on Testnet
 (define-data-var fee-recipient-address principal (if is-in-mainnet 'SP3CRXBDXQ2N5P7E25Q39MEX1HSMRDSEAP3CFK2Z3 'ST3CRXBDXQ2N5P7E25Q39MEX1HSMRDSEAP1JST19D))
 (define-data-var last-sequence-processed uint u0)
 
@@ -115,6 +118,9 @@
 (define-read-only (get-fee-info)
   (merge (var-get fee-value) { address: (var-get fee-recipient-address) }))
 
+(define-read-only (get-stale-price-threshold)
+  (var-get stale-price-threshold))
+
 (define-read-only (get-authorized-prices-data-sources)
   (var-get prices-data-sources))
 
@@ -131,6 +137,21 @@
     ;; Update fee-value
     (let ((updated-data (try! (parse-and-verify-fee-value (get body ptgm)))))
       (var-set fee-value updated-data)
+      (ok updated-data))))
+
+(define-public (update-stale-price-threshold (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
+  (let ((expected-execution-plan (var-get current-execution-plan))
+        (vaa (try! (contract-call? wormhole-core-contract parse-and-verify-vaa vaa-bytes)))
+        (ptgm (try! (parse-and-verify-ptgm (get payload vaa) (get sequence vaa)))))
+    ;; Ensure action's expectation
+    (asserts! (is-eq (get action ptgm) PTGM_STALE_PRICE_THRESHOLD) ERR_UNEXPECTED_ACTION)
+    ;; Ensure that the action is authorized
+    (try! (check-update-source (get emitter-chain vaa) (get emitter-address vaa)))
+    ;; Ensure that the lastest wormhole contract is used
+    (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
+    ;; Update fee-value
+    (let ((updated-data (try! (parse-and-verify-stale-price-threshold (get body ptgm)))))
+      (var-set stale-price-threshold updated-data)
       (ok updated-data))))
 
 (define-public (update-fee-recipient-address (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -348,6 +369,12 @@
       mantissa: (get value cursor-mantissa), 
       exponent: (get value cursor-exponent) 
     })))
+
+(define-private (parse-and-verify-stale-price-threshold (ptgm-body (buff 8192)))
+  (let ((cursor-ptgm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new ptgm-body none))
+        (cursor-stale-price-threshold (unwrap! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-64 (get next cursor-ptgm-body)) 
+          ERR_INVALID_ACTION_PAYLOAD)))
+    (ok (get value cursor-stale-price-threshold))))
 
 (define-private (parse-and-verify-governance-data-source (ptgm-body (buff 8192)))
   (let ((cursor-ptgm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new ptgm-body none))

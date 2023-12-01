@@ -985,3 +985,78 @@ describe("pyth-governance-v1::update-governance-data-source", () => {
     expect(res.result).toBeErr(Cl.uint(4006));
   });
 });
+
+describe("pyth-governance-v1::update-stale-price-threshold", () => {
+  const accounts = simnet.getAccounts();
+  const sender = accounts.get("wallet_1")!;
+  const guardianSet = wormhole.generateGuardianSetKeychain(19);
+  let updateStalePriceThreshold = {
+    threshold: 60n,
+  };
+  let ptgmVaaPayload = pyth.buildPtgmVaaPayload({ updateStalePriceThreshold });
+
+  // Before starting the test suite, we have to setup the guardian set.
+  beforeEach(async () => {
+    wormhole.applyGuardianSetUpdate(
+      guardianSet,
+      1,
+      sender,
+      wormholeCoreContractName,
+    );
+  });
+
+  it("should update stale price threshold on successful updates", () => {
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-stale-price-threshold`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeOk(Cl.uint(updateStalePriceThreshold.threshold));
+
+    res = simnet.callReadOnlyFn(
+      pythGovernanceContractName,
+      `get-stale-price-threshold`,
+      [],
+      sender,
+    );
+    expect(Cl.ok(res.result)).toBeOk(
+      Cl.uint(updateStalePriceThreshold.threshold),
+    );
+  });
+
+  it("should fail if action mismatches", () => {
+    ptgmVaaPayload.action = 0xff;
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-stale-price-threshold`,
+      [Cl.buffer(vaa), wormholeContract],
+      sender,
+    );
+    expect(res.result).toBeErr(Cl.uint(4001));
+  });
+});

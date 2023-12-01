@@ -56,6 +56,8 @@
           (latest-bitcoin-timestamp (unwrap! (get-block-info? time burn-block-height) ERR_STALE_PRICE)))
       ;; Ensure that we have not processed a newer price
       (asserts! (is-price-update-more-recent (get price-identifier entry) (get publish-time entry)) ERR_NEWER_PRICE_AVAILABLE)
+      ;; Ensure that price is not stale
+      (asserts! (>= (get publish-time entry) (- latest-bitcoin-timestamp stale-price-threshold)) ERR_STALE_PRICE)
       ;; Update storage
       (map-set prices 
         (get price-identifier entry) 
