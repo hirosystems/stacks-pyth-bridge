@@ -53,7 +53,7 @@
       prev-publish-time: uint,
     }))
     (let ((stale-price-threshold (contract-call? .pyth-governance-v1 get-stale-price-threshold))
-          (latest-bitcoin-timestamp (unwrap! (get-block-info? time burn-block-height) ERR_STALE_PRICE)))
+          (latest-bitcoin-timestamp (unwrap! (get-block-info? time (- block-height u1)) ERR_STALE_PRICE)))
       ;; Ensure that we have not processed a newer price
       (asserts! (is-price-update-more-recent (get price-identifier entry) (get publish-time entry)) ERR_NEWER_PRICE_AVAILABLE)
       ;; Ensure that price is not stale

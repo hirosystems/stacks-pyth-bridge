@@ -30,27 +30,27 @@ export namespace pyth {
     "ec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17",
     "hex",
   );
-  export const BatPriceIdentifer = Buffer.from(
+  export const BatPriceIdentifier = Buffer.from(
     "8e860fb74e60e5736b455d82f60b3728049c348e94961add5f961b02fdee2535",
     "hex",
   );
-  export const DaiPriceIdentifer = Buffer.from(
+  export const DaiPriceIdentifier = Buffer.from(
     "b0948a5e5313200c632b51bb5ca32f6de0d36e9950a942d19751e833f70dabfd",
     "hex",
   );
-  export const UsdcPriceIdentifer = Buffer.from(
+  export const UsdcPriceIdentifier = Buffer.from(
     "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
     "hex",
   );
-  export const UsdtPriceIdentifer = Buffer.from(
+  export const UsdtPriceIdentifier = Buffer.from(
     "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
     "hex",
   );
-  export const WbtcPriceIdentifer = Buffer.from(
+  export const WbtcPriceIdentifier = Buffer.from(
     "c9d8b075a5c69303365ae23633d4e085199bf5c520a3b90fed1322a0342ffc33",
     "hex",
   );
-  export const TbtcPriceIdentifer = Buffer.from(
+  export const TbtcPriceIdentifier = Buffer.from(
     "56a3121958b01f99fdc4e1fd01e81050602c7ace3a571918bb55c6a96657cca9",
     "hex",
   );
@@ -658,6 +658,39 @@ export namespace pyth {
     let res = simnet.callPublicFn(
       pythGovernanceContractName,
       `update-prices-data-sources`,
+      [Cl.buffer(vaa), wormholeContract],
+      txSenderAddress,
+    );
+
+    return res;
+  }
+
+  export function applyStalePriceThresholdUpdate(
+    updateStalePriceThreshold: { threshold: bigint },
+    emitter: wormhole.Emitter,
+    guardianSet: wormhole.Guardian[],
+    txSenderAddress: string,
+    pythGovernanceContractName: string,
+    wormholeCoreContractName: string,
+    sequence: bigint,
+  ) {
+    let ptgmVaaPayload = pyth.buildPtgmVaaPayload({
+      updateStalePriceThreshold,
+    });
+    let payload = pyth.serializePtgmVaaPayloadToBuffer(ptgmVaaPayload);
+    let body = wormhole.buildValidVaaBodySpecs({ payload, sequence, emitter });
+    let header = wormhole.buildValidVaaHeader(guardianSet, body, {
+      version: 1,
+      guardianSetId: 1,
+    });
+    let vaa = wormhole.serializeVaaToBuffer(header, body);
+    let wormholeContract = Cl.contractPrincipal(
+      simnet.deployer,
+      wormholeCoreContractName,
+    );
+    let res = simnet.callPublicFn(
+      pythGovernanceContractName,
+      `update-stale-price-threshold`,
       [Cl.buffer(vaa), wormholeContract],
       txSenderAddress,
     );
