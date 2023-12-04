@@ -8,59 +8,83 @@ plan:
   batches:
     - id: 0
       transactions:
+        - requirement-publish:
+            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2
+            remap-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
+            remap-principals:
+              SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
+            cost: 64640
+            path: "./.cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2.clar"
+            clarity-version: 2
+        - requirement-publish:
+            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-ecc-v1
+            remap-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
+            remap-principals:
+              SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
+            cost: 9440
+            path: "./.cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-ecc-v1.clar"
+            clarity-version: 2
+        - requirement-publish:
+            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-merkle-tree-keccak160-v1
+            remap-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
+            remap-principals:
+              SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
+            cost: 11000
+            path: "./.cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-merkle-tree-keccak160-v1.clar"
+            clarity-version: 2
         - contract-publish:
             contract-name: wormhole-traits-v1
-            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
             cost: 2899063
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             path: contracts/wormhole/wormhole-traits-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-traits-v1
-            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
             cost: 2899963
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             path: contracts/pyth-traits-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-governance-v1
-            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
             cost: 2918145
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             path: contracts/pyth-governance-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-oracle-v1
-            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
             cost: 2900503
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             path: contracts/pyth-oracle-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-pnau-decoder-v1
-            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
             cost: 2912384
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             path: contracts/pyth-pnau-decoder-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-store-v1
-            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
             cost: 2900503
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             path: contracts/pyth-store-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: wormhole-core-v1
-            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
             cost: 2915625
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             path: contracts/wormhole/wormhole-core-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-helper-v1
-            expected-sender: ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR
             cost: 2899063
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             path: contracts/pyth-helper-v1.clar
             anchor-block-only: true
             clarity-version: 2
@@ -68,8 +92,8 @@ plan:
     - id: 1
       transactions:
         - contract-call:
-            contract-id: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.wormhole-core-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            contract-id: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M.wormhole-core-v1
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             method: update-guardians-set
             parameters:
               # VAA of 1st guardians rotation
@@ -97,8 +121,8 @@ plan:
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
         - contract-call:
-            contract-id: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.wormhole-core-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            contract-id: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M.wormhole-core-v1
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             method: update-guardians-set
             parameters:
               # VAA of 2nd guardians rotation
@@ -126,8 +150,8 @@ plan:
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
         - contract-call:
-            contract-id: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.wormhole-core-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            contract-id: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M.wormhole-core-v1
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             method: update-guardians-set
             parameters:
               # VAA of 3rd guardians rotation
@@ -155,8 +179,8 @@ plan:
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
         - contract-call:
-            contract-id: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-helper-v1
-            expected-sender: ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG
+            contract-id: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M.pyth-helper-v1
+            expected-sender: ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M
             method: verify-and-update-price
             parameters:
               # PNAU payload
