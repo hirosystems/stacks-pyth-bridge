@@ -14,9 +14,9 @@
 
 # Introduction
 
-**Status**: **Developer Preview**
+**Status**: **Beta**
 
-This initial release is a Developer Preview of the Stacks x Pyth integration. The integration is live on both the testnet and mainnet networks to help developers test, give feedback, and ensure the reliability and stability of the integration.
+The Pyth protocol integration is available as a Beta on both testnet and mainnet networks, to help developers test, give feedback, and ensure the reliability and stability of the integration.
 
 [Stacks](http://stacks.co) is a blockchain linked to Bitcoin by its consensus mechanism that spans the two chains, called Proof of Transfer. This enables Stacks to leverage Bitcoin’s security and enables Stacks apps to use Bitcoin’s state.
 Stacks is a Bitcoin layer that enables decentralized apps and smart contracts.
@@ -39,86 +39,14 @@ $ npm install
 $ npm test
 ```
 
-## Setup and Test a Devnet Bridge
+## Consuming price feeds
 
-This guide assumes that a recent installation of Clarinet (available on brew and winget) is available locally. 
-
-The bridge can be operated through an off-chain service, `stacks-pyth-relayer`, and a set of contracts implementing the core functionalities specified by the Wormhole protocol. 
-
-Start a local Devnet using the command:
-```bash
-$ clarinet integrate
-```
-
-In another console, the service can be compiled and installed using the command:
-
-```bash
-$ cd stacks-pyth-bridge/relayer
-$ cargo install --path .
-```
-
-Once installed, a config can be generated using the command:
-
-```bash
-$ stacks-pyth-relayer config new
-```
-
-A typical valid config looks like this:
-
-```toml
-[pyth]
-network = "mainnet"
-price_service_url = "https://xc-mainnet.pyth.network"
-price_feeds_ids = [
-    # "0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b", # BTC-USD (testnet)
-    # "0xc2703fcc925ad32b6256afc3ebad634970d1b1ffb3f4143e36b2d055b1dcd29b", # STX-USD (testnet)
-    "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43", # BTC-USD (mainnet)
-]
-# Price feed IDs available here: https://pyth.network/developers/price-feed-ids
-
-[stacks]
-network = "devnet"
-stacks_node_rpc_url = "http://localhost:20443"
-pyth_oracle_contract_address = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-price-feed-oracle-v1"
-mnemonic = "prevent gallery kind limb income control noise together echo rival record wedding sense uncover school version force bleak nuclear include danger skirt enact arrow"
-derivation_path = "m/44'/5757'/0'/0/0"
-start_block = 6
-
-[bridge]
-price_updates_per_minute = 5
-enable_rbf = true
-enable_microblocks = true
-
-[event_observer]
-ingestion_port = 20456
-```
-
-After reviewing the generated config, the service can be tested using the command:
-
-```bash
-$ stacks-pyth-relayer service ping --config-path Bridge.toml
-```
-
-After validating that the service can connect to the Price API service and the Stacks chain, the service can be run with the command:
-
-```bash
-$ stacks-pyth-relayer service start --config-path Bridge.toml
-```
-
-The operator will start fetching prices from the Pyth network Price API and submit these Verified Action Attestations to the Pyth contract. The Pyth contract submits these VAAs to the wormhole contract, ensuring the guardians correctly sign the payloads.
-
-![architecture](docs/architecture.png)
-
-
-## How to consume the price feeds
-
-### Latest Version
+### Latest Deployments
 
 | network | address |
 |---------|---------------------------------------------------------------------|
-| testnet | ST2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EPXFQFR.pyth-oracle-dev-preview-1 |
-| mainnet | SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.pyth-oracle-dev-preview-1 |
-
+| testnet | [ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M.pyth-helper-v1](https://explorer.hiro.so/txid/0x55bb516f989e18fc55e0f0921201a73c4f95e77abad9e3b129a61a2d43e92a68?chain=testnet) |
+| mainnet | [SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1](https://explorer.hiro.so/txid/0xd43086bd98922ae0f8988c5988bbd37d8cb48acbe6b01c399dde14ca800ac10d?chain=mainnet) |
 
 ### Onchain
 
@@ -128,14 +56,14 @@ The `pyth-helper-v1` contract is exposing the following method:
 (define-public (read-price 
     (price-feed-id (buff 32))))
 ```
- 
+
 That can be consumed with the following invocation:
 
 ```clarity
 (contract-call? 
-    'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-helper-v1  ;; Address of the helper contract
+    'SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1                ;; Address of the helper contract
     read-price
-    0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b)
+    0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43)      ;; BTC-USD price identifier
 ```
 
 The authenticity of the price feeds is verified during their ingestion, making the cost of queries as light as possible.
@@ -171,8 +99,49 @@ For every new price recorded and stored on chain, the `pyth-store-v1` is emittin
 
 These events can be observed using [Chainhook](https://github.com/hirosystems/chainhook), using the `print` predicates.
 
-## Todos:
+## Updating price feeds
 
-- [ ] Resolve remaining todo
-- [ ] Document usage
-- [ ] Document example/cbtc
+Pyth Network uses [a pull price update model](https://docs.pyth.network/documentation/pythnet-price-feeds/on-demand) that is slightly different from other oracles you may be more familiar with. Most oracles today use a push model, where the oracle runs an off-chain process that continuously sends transactions to update an on-chain price. In contrast, Pyth Network does not operate an off-chain process that pushes prices on-chain. Instead, it delegates this work to Pyth Network users.
+
+[Hermes](https://docs.pyth.network/documentation/pythnet-price-feeds/hermes) is a web service that listens to the Pythnet and the Wormhole Network for Pyth price updates, and serves them via a convenient web API. It provides Pyth's latest price update data format that are more cost-effective to verify and use on-chain.
+Hermes allows users to easily query for recent price updates via a REST API, or subscribe to a websocket for streaming updates. The Pyth Network's Javascript SDKs connect to an instance of Hermes to fetch price updates.
+
+```console
+$ curl https://hermes.pyth.network/api/latest_price_feeds?ids[]=ec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17&binary=true \
+| jq -r '.[0]'.vaa \
+| base64 --decode \
+| hexdump -ve '1/1 "%.2x"'
+
+504e41550100000003b8...a7b10321ad7c2404a910
+```
+
+This sequence of bytes is a Verified Action Approvals (VAA) including the price informations including its cryptographic elements helping the Pyth contract ensuring the authenticity of the data.
+
+This VAA can be encoded as a Clarity buffer, and submitted to the Pyth contract using the following:
+
+```clarity
+(contract-call? 
+    'SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1   ;; Address of the helper contract
+    verify-and-update-price
+    0x504e41550100000003b8...a7b10321ad7c2404a910)              ;; BTC-USD price update
+```
+
+If the VAA is valid, the contract call will return a payload with the following signature:
+
+```clarity
+(response 
+  (list 64 {
+    price-identifier: (buff 32),
+    price: int,
+    conf: uint,
+    expo: int,
+    ema-price: int,
+    ema-conf: uint,
+    publish-time: uint,
+    prev-publish-time: uint,
+  }) 
+  uint)
+```
+
+Including all the prices successfully updating the oracle.
+All of the implementation details can be found in [Pyth documentation](https://docs.pyth.network/documentation/how-pyth-works).
