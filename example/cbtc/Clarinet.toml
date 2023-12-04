@@ -5,10 +5,10 @@ description = ""
 telemetry = false
 
 [[project.requirements]]
-contract_id = "SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard"
+contract_id = "SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-tokens-v1"
 
 [[project.requirements]]
-contract_id = "SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.pyth-oracle-dev-preview-1"
+contract_id = "SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1"
 
 [contracts.cbtc-token]
 path = "contracts/cbtc-token.clar"
