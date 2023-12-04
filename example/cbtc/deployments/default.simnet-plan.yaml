@@ -49,32 +49,59 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: sip-010-trait-ft-standard
-            emulated-sender: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE
-            path: ".cache/requirements/SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.clar"
-            clarity-version: 1
-      epoch: "2.0"
-    - id: 1
-      transactions:
-        - emulated-contract-publish:
-            contract-name: hk-cursor-v1
+            contract-name: hk-tokens-v1
             emulated-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
-            path: ".cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v1.clar"
+            path: ".cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-tokens-v1.clar"
             clarity-version: 2
         - emulated-contract-publish:
-            contract-name: wormhole-core-trait
-            emulated-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
-            path: ".cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.wormhole-core-trait.clar"
+            contract-name: wormhole-traits-v1
+            emulated-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
+            path: ".cache/requirements/SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.wormhole-traits-v1.clar"
             clarity-version: 2
         - emulated-contract-publish:
-            contract-name: wormhole-core-dev-preview-1
-            emulated-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
-            path: ".cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.wormhole-core-dev-preview-1.clar"
+            contract-name: pyth-traits-v1
+            emulated-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
+            path: ".cache/requirements/SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-traits-v1.clar"
             clarity-version: 2
         - emulated-contract-publish:
-            contract-name: pyth-oracle-dev-preview-1
+            contract-name: hk-cursor-v2
             emulated-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
-            path: ".cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.pyth-oracle-dev-preview-1.clar"
+            path: ".cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2.clar"
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: pyth-governance-v1
+            emulated-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
+            path: ".cache/requirements/SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-governance-v1.clar"
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: pyth-oracle-v1
+            emulated-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
+            path: ".cache/requirements/SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-oracle-v1.clar"
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: hk-merkle-tree-keccak160-v1
+            emulated-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            path: ".cache/requirements/SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-merkle-tree-keccak160-v1.clar"
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: pyth-pnau-decoder-v1
+            emulated-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
+            path: ".cache/requirements/SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-pnau-decoder-v1.clar"
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: pyth-store-v1
+            emulated-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
+            path: ".cache/requirements/SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-store-v1.clar"
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: wormhole-core-v1
+            emulated-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
+            path: ".cache/requirements/SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.wormhole-core-v1.clar"
+            clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: pyth-helper-v1
+            emulated-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
+            path: ".cache/requirements/SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1.clar"
             clarity-version: 2
         - emulated-contract-publish:
             contract-name: cbtc-token
@@ -87,10 +114,10 @@ plan:
             path: contracts/cbtc-pool.clar
             clarity-version: 2
       epoch: "2.4"
-    - id: 2
+    - id: 1
       transactions:
         - emulated-contract-call:
-            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.wormhole-core-dev-preview-1
+            contract-id: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.wormhole-core-v1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             method: update-guardians-set
             parameters:
@@ -119,7 +146,7 @@ plan:
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
         - emulated-contract-call:
-            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.wormhole-core-dev-preview-1
+            contract-id: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.wormhole-core-v1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             method: update-guardians-set
             parameters:
@@ -148,7 +175,7 @@ plan:
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
         - emulated-contract-call:
-            contract-id: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.wormhole-core-dev-preview-1
+            contract-id: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.wormhole-core-v1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             method: update-guardians-set
             parameters:

@@ -10,56 +10,56 @@ plan:
       transactions:
         - contract-publish:
             contract-name: wormhole-traits-v1
-            expected-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             cost: 1486613
             path: contracts/wormhole/wormhole-traits-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-traits-v1
-            expected-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             cost: 1487019
             path: contracts/pyth-traits-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-governance-v1
-            expected-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             cost: 1495228
             path: contracts/pyth-governance-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-oracle-v1
-            expected-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             cost: 1487263
             path: contracts/pyth-oracle-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-pnau-decoder-v1
-            expected-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             cost: 1492627
             path: contracts/pyth-pnau-decoder-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-store-v1
-            expected-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             cost: 1487263
             path: contracts/pyth-store-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: wormhole-core-v1
-            expected-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             cost: 1494091
             path: contracts/wormhole/wormhole-core-v1.clar
             anchor-block-only: true
             clarity-version: 2
         - contract-publish:
             contract-name: pyth-helper-v1
-            expected-sender: SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             cost: 1486613
             path: contracts/pyth-helper-v1.clar
             anchor-block-only: true
@@ -68,8 +68,8 @@ plan:
     - id: 1
       transactions:
         - contract-call:
-            contract-id: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.wormhole-core-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            contract-id: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.wormhole-core-v1
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             method: update-guardians-set
             parameters:
               # VAA of 1st guardians rotation
@@ -97,8 +97,8 @@ plan:
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
         - contract-call:
-            contract-id: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.wormhole-core-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            contract-id: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.wormhole-core-v1
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             method: update-guardians-set
             parameters:
               # VAA of 2nd guardians rotation
@@ -126,8 +126,8 @@ plan:
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
         - contract-call:
-            contract-id: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.wormhole-core-v1
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            contract-id: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.wormhole-core-v1
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             method: update-guardians-set
             parameters:
               # VAA of 3rd guardians rotation
@@ -155,8 +155,8 @@ plan:
                 0x21f338444e96af31cf44958acf5764844efbddace3b823ed761c340c59ed2685d829818c83eebe8f00f783f1048a53515845536668a9e0c059ade7579a0f4204)'
             cost: 5960
         - contract-call:
-            contract-id: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.pyth-helper-v1
-            expected-sender: ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG
+            contract-id: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1
+            expected-sender: SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP
             method: verify-and-update-price
             parameters:
               # PNAU payload
