@@ -66,8 +66,6 @@
 (define-constant ERR_GSU_CHECK_CHAIN (err u1303))
 ;; Guardian Set Update new index invalid
 (define-constant ERR_GSU_CHECK_INDEX (err u1304))
-;; Quorum of addresses required
-(define-constant QUORUM u13)
 
 (define-constant hk-cursor-v2 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2)
 
@@ -176,7 +174,7 @@
       (asserts! (is-eq (get version (get vaa message)) u1) 
         ERR_VAA_CHECKS_VERSION_UNSUPPORTED)
       ;; Ensure that the count of valid signatures is >= 13
-      (asserts! (>= (len (get result signatures-from-active-guardians)) QUORUM)
+      (asserts! (>= (len (get result signatures-from-active-guardians)) (get-quorum (len active-guardians)))
         ERR_VAA_CHECKS_THRESHOLD_SIGNATURE)
       ;; Good to go!
       (ok (get vaa message)))))
@@ -356,6 +354,9 @@
                 (* (get value cursor-guardians-count) u20)) 
       }
     })))
+
+(define-private (get-quorum (guardian-set-size uint))
+  (+ (/ (* guardian-set-size u2) u3) u1))
 
 (define-private (is-guardian-cue (byte (buff 1)) (acc { cursor: uint, result: (list 19 uint) }))
   (if (is-eq u0 (mod (get cursor acc) u20))
