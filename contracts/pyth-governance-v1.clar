@@ -165,7 +165,7 @@
     ;; Ensure that the lastest wormhole contract is used
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update fee-recipient address
-    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+    (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set fee-recipient-address updated-data)
       (ok updated-data))))
 
@@ -180,7 +180,7 @@
     ;; Ensure that the lastest wormhole contract is used
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update execution plan
-    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+    (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set current-execution-plan (merge expected-execution-plan { wormhole-core-contract: updated-data }))
       (ok (var-get current-execution-plan)))))
 
@@ -195,7 +195,7 @@
     ;; Ensure that the lastest wormhole contract is used
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update execution plan
-    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+    (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set current-execution-plan (merge expected-execution-plan { pyth-oracle-contract: updated-data }))
       (ok (var-get current-execution-plan)))))
 
@@ -210,7 +210,7 @@
     ;; Ensure that the lastest wormhole contract is used
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update execution plan
-    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+    (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set current-execution-plan (merge expected-execution-plan { pyth-decoder-contract: updated-data }))
       (ok (var-get current-execution-plan)))))
 
@@ -225,7 +225,7 @@
     ;; Ensure that the lastest wormhole contract is used
     (try! (expect-active-wormhole-contract wormhole-core-contract expected-execution-plan))
     ;; Update execution plan
-    (let ((updated-data (unwrap! (from-consensus-buff? principal (get body ptgm)) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+    (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set current-execution-plan (merge expected-execution-plan { pyth-storage-contract: updated-data }))
       (ok (var-get current-execution-plan)))))
 
@@ -387,6 +387,12 @@
       emitter-address: (get value cursor-emitter-address) 
     })))
 
+(define-private (parse-principal (pgtm-body (buff 8192)))
+  (let ((cursor-pgtm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new pgtm-body none))
+        (cursor-principal-len (try! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-pgtm-body))))
+        (principal-bytes (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 slice (get next cursor-principal-len) (some (get value cursor-principal-len))))
+        (new-principal (unwrap! (from-consensus-buff? principal principal-bytes) ERR_UNEXPECTED_ACTION_PAYLOAD)))
+    (ok new-principal))) 
 
 (define-private (parse-and-verify-prices-data-sources (pgtm-body (buff 8192)))
   (let ((cursor-pgtm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new pgtm-body none))
