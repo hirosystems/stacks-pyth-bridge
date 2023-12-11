@@ -59,7 +59,7 @@ export namespace pyth {
   export const AuwvMagicBytes = new Uint8Array(Buffer.from("41555756", "hex"));
   export const PgtmMagicBytes = new Uint8Array(Buffer.from("5054474d", "hex"));
   export const InitialGovernanceDataSource = {
-    chain: 0,
+    chain: 1,
     address: hexToBytes(
       "5635979a221c34931e32620b9293a463065555ea71fe97cd6237ade875b12e9e",
     ),
