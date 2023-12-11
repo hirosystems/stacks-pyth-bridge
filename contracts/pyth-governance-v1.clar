@@ -46,7 +46,7 @@
 (define-constant ERR_OUTDATED (err u4005))
 ;; Error unauthorized update
 (define-constant ERR_UNAUTHORIZED_UPDATE (err u4006))
-;; Error parsing PGTM
+;; Error parsing PTGM
 (define-constant ERR_INVALID_PTGM (err u4007))
 
 (define-data-var governance-data-source 
@@ -405,16 +405,16 @@
       emitter-address: (get value cursor-emitter-address) 
     })))
 
-(define-private (parse-principal (pgtm-body (buff 8192)))
-  (let ((cursor-pgtm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new pgtm-body none))
-        (cursor-principal-len (try! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-pgtm-body))))
+(define-private (parse-principal (ptgm-body (buff 8192)))
+  (let ((cursor-ptgm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new ptgm-body none))
+        (cursor-principal-len (try! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-ptgm-body))))
         (principal-bytes (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 slice (get next cursor-principal-len) (some (get value cursor-principal-len))))
         (new-principal (unwrap! (from-consensus-buff? principal principal-bytes) ERR_UNEXPECTED_ACTION_PAYLOAD)))
     (ok new-principal))) 
 
-(define-private (parse-and-verify-prices-data-sources (pgtm-body (buff 8192)))
-  (let ((cursor-pgtm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new pgtm-body none))
-        (cursor-num-data-sources (try! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-pgtm-body))))
+(define-private (parse-and-verify-prices-data-sources (ptgm-body (buff 8192)))
+  (let ((cursor-ptgm-body (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 new ptgm-body none))
+        (cursor-num-data-sources (try! (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 read-uint-8 (get next cursor-ptgm-body))))
         (cursor-data-sources-bytes (contract-call? 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2 slice (get next cursor-num-data-sources) none))
         (data-sources (get result (fold parse-data-source cursor-data-sources-bytes { 
           result: (list), 
