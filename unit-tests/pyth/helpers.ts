@@ -59,7 +59,7 @@ export namespace pyth {
   export const AuwvMagicBytes = new Uint8Array(Buffer.from("41555756", "hex"));
   export const PgtmMagicBytes = new Uint8Array(Buffer.from("5054474d", "hex"));
   export const InitialGovernanceDataSource = {
-    chain: 0,
+    chain: 1,
     address: hexToBytes(
       "5635979a221c34931e32620b9293a463065555ea71fe97cd6237ade875b12e9e",
     ),
@@ -301,6 +301,32 @@ export namespace pyth {
     };
   }
 
+  function serializePrincipal(payload: {
+    address: string;
+    contractName?: string;
+  }): Uint8Array[] {
+    const components = [];
+    if (payload.contractName) {
+      let principal = contractPrincipalCV(
+        payload.address,
+        payload.contractName,
+      );
+      let serializedPrincipal = clarityValueToBuffer(principal);
+      let v = Buffer.alloc(1);
+      v.writeUint8(serializedPrincipal.length, 0);
+      components.push(v);
+      components.push(serializedPrincipal);
+    } else {
+      let principal = principalCV(payload.address);
+      let serializedPrincipal = clarityValueToBuffer(principal);
+      let v = Buffer.alloc(1);
+      v.writeUint8(serializedPrincipal.length, 0);
+      components.push(v);
+      components.push(clarityValueToBuffer(principal));
+    }
+    return components;
+  }
+
   export function serializePtgmVaaPayloadToBuffer(
     payload: PtgmVaaPayload,
   ): Uint8Array {
@@ -324,40 +350,15 @@ export namespace pyth {
       components.push(bigintToBuffer(payload.updateFeeValue.mantissa, 8));
       components.push(bigintToBuffer(payload.updateFeeValue.exponent, 8));
     } else if (payload.updateFeeRecipient) {
-      if (payload.updateFeeRecipient.contractName) {
-        let principal = contractPrincipalCV(
-          payload.updateFeeRecipient.address,
-          payload.updateFeeRecipient.contractName,
-        );
-        components.push(clarityValueToBuffer(principal));
-      } else {
-        let principal = principalCV(payload.updateFeeRecipient.address);
-        components.push(clarityValueToBuffer(principal));
-      }
+      components.push(...serializePrincipal(payload.updateFeeRecipient));
     } else if (payload.updateOracleContract) {
-      let principal = contractPrincipalCV(
-        payload.updateOracleContract.address,
-        payload.updateOracleContract.contractName,
-      );
-      components.push(clarityValueToBuffer(principal));
+      components.push(...serializePrincipal(payload.updateOracleContract));
     } else if (payload.updateWormholeContract) {
-      let principal = contractPrincipalCV(
-        payload.updateWormholeContract.address,
-        payload.updateWormholeContract.contractName,
-      );
-      components.push(clarityValueToBuffer(principal));
+      components.push(...serializePrincipal(payload.updateWormholeContract));
     } else if (payload.updateStoreContract) {
-      let principal = contractPrincipalCV(
-        payload.updateStoreContract.address,
-        payload.updateStoreContract.contractName,
-      );
-      components.push(clarityValueToBuffer(principal));
+      components.push(...serializePrincipal(payload.updateStoreContract));
     } else if (payload.updateDecoderContract) {
-      let principal = contractPrincipalCV(
-        payload.updateDecoderContract.address,
-        payload.updateDecoderContract.contractName,
-      );
-      components.push(clarityValueToBuffer(principal));
+      components.push(...serializePrincipal(payload.updateDecoderContract));
     } else if (payload.updateStalePriceThreshold) {
       components.push(
         bigintToBuffer(payload.updateStalePriceThreshold.threshold, 8),
