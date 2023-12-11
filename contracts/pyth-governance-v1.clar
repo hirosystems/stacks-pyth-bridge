@@ -137,6 +137,8 @@
     ;; Update fee-value
     (let ((updated-data (try! (parse-and-verify-fee-value (get body ptgm)))))
       (var-set fee-value updated-data)
+      ;; Emit event
+      (print { type: "fee-value", action: "updated", data: updated-data })
       (ok updated-data))))
 
 (define-public (update-stale-price-threshold (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -152,6 +154,8 @@
     ;; Update fee-value
     (let ((updated-data (try! (parse-and-verify-stale-price-threshold (get body ptgm)))))
       (var-set stale-price-threshold updated-data)
+      ;; Emit event
+      (print { type: "stale-price-threshold", action: "updated", data: updated-data })
       (ok updated-data))))
 
 (define-public (update-fee-recipient-address (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -167,6 +171,8 @@
     ;; Update fee-recipient address
     (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set fee-recipient-address updated-data)
+      ;; Emit event
+      (print { type: "fee-recipient", action: "updated", data: updated-data })
       (ok updated-data))))
 
 (define-public (update-wormhole-core-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -182,6 +188,8 @@
     ;; Update execution plan
     (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set current-execution-plan (merge expected-execution-plan { wormhole-core-contract: updated-data }))
+      ;; Emit event
+      (print { type: "wormhole-core-contract", action: "updated", data: updated-data })
       (ok (var-get current-execution-plan)))))
 
 (define-public (update-pyth-oracle-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -197,6 +205,8 @@
     ;; Update execution plan
     (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set current-execution-plan (merge expected-execution-plan { pyth-oracle-contract: updated-data }))
+      ;; Emit event
+      (print { type: "pyth-oracle-contract", action: "updated", data: updated-data })
       (ok (var-get current-execution-plan)))))
 
 (define-public (update-pyth-decoder-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -212,6 +222,8 @@
     ;; Update execution plan
     (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set current-execution-plan (merge expected-execution-plan { pyth-decoder-contract: updated-data }))
+      ;; Emit event
+      (print { type: "pyth-decoder-contract", action: "updated", data: updated-data })
       (ok (var-get current-execution-plan)))))
 
 (define-public (update-pyth-store-contract (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -227,6 +239,8 @@
     ;; Update execution plan
     (let ((updated-data (try! (parse-principal (get body ptgm)))))
       (var-set current-execution-plan (merge expected-execution-plan { pyth-storage-contract: updated-data }))
+      ;; Emit event
+      (print { type: "pyth-storage-contract", action: "updated", data: updated-data })
       (ok (var-get current-execution-plan)))))
 
 (define-public (update-prices-data-sources (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -242,6 +256,8 @@
     ;; Update prices-data-sources
     (let ((updated-data (try! (parse-and-verify-prices-data-sources (get body ptgm)))))
       (var-set prices-data-sources updated-data)
+      ;; Emit event
+      (print { type: "prices-data-sources", action: "updated", data: updated-data })
       (ok updated-data))))
 
 (define-public (update-governance-data-source (vaa-bytes (buff 8192)) (wormhole-core-contract <wormhole-core-trait>))
@@ -257,6 +273,8 @@
     ;; Update prices-data-sources
     (let ((updated-data (try! (parse-and-verify-governance-data-source (get body ptgm)))))
       (var-set governance-data-source updated-data)
+      ;; Emit event
+      (print { type: "governance-data-source", action: "updated", data: updated-data })
       (ok updated-data))))
 
 (define-private (check-update-source (emitter-chain uint) (emitter-address (buff 32)))
