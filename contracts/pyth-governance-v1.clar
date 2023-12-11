@@ -51,7 +51,7 @@
 
 (define-data-var governance-data-source 
   { emitter-chain: uint, emitter-address: (buff 32) }
-  { emitter-chain: u0, emitter-address: 0x5635979a221c34931e32620b9293a463065555ea71fe97cd6237ade875b12e9e })
+  { emitter-chain: u1, emitter-address: 0x5635979a221c34931e32620b9293a463065555ea71fe97cd6237ade875b12e9e })
 (define-data-var prices-data-sources 
   (list 255 { emitter-chain: uint, emitter-address: (buff 32) })
   (list
