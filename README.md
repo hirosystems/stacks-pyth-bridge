@@ -45,8 +45,8 @@ $ npm test
 
 | network | address |
 |---------|---------------------------------------------------------------------|
-| testnet | [ST3XVPDNZJ9QN0KJ327SYPKP6YS15PHJRBKWXTZ3M.pyth-helper-v1](https://explorer.hiro.so/txid/0x55bb516f989e18fc55e0f0921201a73c4f95e77abad9e3b129a61a2d43e92a68?chain=testnet) |
-| mainnet | [SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1](https://explorer.hiro.so/txid/0xd43086bd98922ae0f8988c5988bbd37d8cb48acbe6b01c399dde14ca800ac10d?chain=mainnet) |
+| testnet | [ST2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY1JKX06E.pyth-helper-v1](https://explorer.hiro.so/txid/0x5339f90ccdbb88e437b9b889613f1554c377d5815e3b90bbc6305b317b7bb8e8?chain=testnet) |
+| mainnet | [SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-helper-v1](https://explorer.hiro.so/txid/0xd86c2fda8a090c43016250c33231878673af62ac95d9c50645f6e2c303b9a173?chain=mainnet) |
 
 ### Onchain
 
@@ -61,7 +61,7 @@ That can be consumed with the following invocation:
 
 ```clarity
 (contract-call? 
-    'SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1                ;; Address of the helper contract
+    'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-helper-v1                ;; Address of the helper contract
     read-price
     0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43)      ;; BTC-USD price identifier
 ```
@@ -121,7 +121,7 @@ This VAA can be encoded as a Clarity buffer, and submitted to the Pyth contract 
 
 ```clarity
 (contract-call? 
-    'SP19F0S4GN8CJQ4K9PKWRBVE00G2C86QTPTRXZ7GP.pyth-helper-v1   ;; Address of the helper contract
+    'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-helper-v1   ;; Address of the helper contract
     verify-and-update-price
     0x504e41550100000003b8...a7b10321ad7c2404a910)              ;; BTC-USD price update
 ```
