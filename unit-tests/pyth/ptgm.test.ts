@@ -6,7 +6,7 @@ import { hexToBytes } from "@noble/hashes/utils";
 import { ParsedTransactionResult } from "@hirosystems/clarinet-sdk";
 import { ptgmTestnetVaas } from "./fixtures";
 
-const pythOracleContractName = "pyth-oracle-v1";
+const pythOracleContractName = "pyth-oracle-v2";
 const pythStorageContractName = "pyth-store-v1";
 const pythDecoderPnauContractName = "pyth-pnau-decoder-v1";
 const pythGovernanceContractName = "pyth-governance-v1";
