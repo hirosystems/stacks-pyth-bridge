@@ -24,8 +24,8 @@ path = 'contracts/pyth-governance-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
-[contracts.pyth-oracle-v1]
-path = 'contracts/pyth-oracle-v1.clar'
+[contracts.pyth-oracle-v2]
+path = 'contracts/pyth-oracle-v2.clar'
 clarity_version = 2
 epoch = 2.4
 

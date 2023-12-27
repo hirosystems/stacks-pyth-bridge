@@ -616,7 +616,7 @@ describe("pyth-governance-v1::update-pyth-oracle-contract", () => {
   const guardianSet = wormhole.generateGuardianSetKeychain(19);
   let updateOracleContract = {
     address: "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG",
-    contractName: "pyth-oracle-v2",
+    contractName: "pyth-oracle-new-version",
   };
   let ptgmVaaPayload = pyth.buildPtgmVaaPayload({ updateOracleContract });
 
