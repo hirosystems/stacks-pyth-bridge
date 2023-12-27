@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { wormhole } from "../wormhole/helpers";
 import { pyth } from "./helpers";
 
-const pythOracleContractName = "pyth-oracle-v1";
+const pythOracleContractName = "pyth-oracle-v2";
 const pythDecoderPnauContractName = "pyth-pnau-decoder-v1";
 const pythGovernanceContractName = "pyth-governance-v1";
 const pythStorageContractName = "pyth-store-v1";
@@ -762,6 +762,54 @@ describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds failures", () => {
     );
     expect(res.result).toBeOk(
       Cl.list([
+        Cl.tuple({
+          "price-identifier": Cl.buffer(pyth.StxPriceIdentifier),
+          price: Cl.int(actualPricesUpdates.decoded[1].price),
+          conf: Cl.uint(actualPricesUpdates.decoded[1].conf),
+          "ema-conf": Cl.uint(actualPricesUpdates.decoded[1].emaConf),
+          "ema-price": Cl.int(actualPricesUpdates.decoded[1].emaPrice),
+          expo: Cl.int(actualPricesUpdates.decoded[1].expo),
+          "prev-publish-time": Cl.uint(
+            actualPricesUpdates.decoded[1].prevPublishTime,
+          ),
+          "publish-time": Cl.uint(actualPricesUpdates.decoded[1].publishTime),
+        }),
+        Cl.tuple({
+          "price-identifier": Cl.buffer(pyth.UsdcPriceIdentifier),
+          price: Cl.int(actualPricesUpdates.decoded[2].price),
+          conf: Cl.uint(actualPricesUpdates.decoded[2].conf),
+          "ema-conf": Cl.uint(actualPricesUpdates.decoded[2].emaConf),
+          "ema-price": Cl.int(actualPricesUpdates.decoded[2].emaPrice),
+          expo: Cl.int(actualPricesUpdates.decoded[2].expo),
+          "prev-publish-time": Cl.uint(
+            actualPricesUpdates.decoded[2].prevPublishTime,
+          ),
+          "publish-time": Cl.uint(actualPricesUpdates.decoded[2].publishTime),
+        }),
+      ]),
+    );
+
+    // decode-price-feeds should not be filtering the outdated results
+    res = simnet.callPublicFn(
+      pythOracleContractName,
+      "decode-price-feeds",
+      [Cl.buffer(pnau), executionPlan],
+      sender,
+    );
+    expect(res.result).toBeOk(
+      Cl.list([
+        Cl.tuple({
+          "price-identifier": Cl.buffer(pyth.BtcPriceIdentifier),
+          price: Cl.int(actualPricesUpdates.decoded[0].price),
+          conf: Cl.uint(actualPricesUpdates.decoded[0].conf),
+          "ema-conf": Cl.uint(actualPricesUpdates.decoded[0].emaConf),
+          "ema-price": Cl.int(actualPricesUpdates.decoded[0].emaPrice),
+          expo: Cl.int(actualPricesUpdates.decoded[0].expo),
+          "prev-publish-time": Cl.uint(
+            actualPricesUpdates.decoded[0].prevPublishTime,
+          ),
+          "publish-time": Cl.uint(actualPricesUpdates.decoded[0].publishTime),
+        }),
         Cl.tuple({
           "price-identifier": Cl.buffer(pyth.StxPriceIdentifier),
           price: Cl.int(actualPricesUpdates.decoded[1].price),

@@ -14,18 +14,13 @@ contract_id = 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-ecc-v1'
 [[project.requirements]]
 contract_id = 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-merkle-tree-keccak160-v1'
 
-[contracts.pyth-helper-v1]
-path = 'contracts/pyth-helper-v1.clar'
-clarity_version = 2
-epoch = 2.4
-
 [contracts.pyth-governance-v1]
 path = 'contracts/pyth-governance-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
-[contracts.pyth-oracle-v1]
-path = 'contracts/pyth-oracle-v1.clar'
+[contracts.pyth-oracle-v2]
+path = 'contracts/pyth-oracle-v2.clar'
 clarity_version = 2
 epoch = 2.4
 

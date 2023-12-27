@@ -42,3 +42,23 @@
       ;; Charge fee
       (unwrap! (stx-transfer? fee-amount tx-sender (get address fee-info)) ERR_BALANCE_INSUFFICIENT)
       (ok updated-prices))))
+
+(define-public (decode-price-feeds 
+    (price-feed-bytes (buff 8192))
+    (execution-plan {
+      pyth-storage-contract: <pyth-storage-trait>,
+      pyth-decoder-contract: <pyth-decoder-trait>,
+      wormhole-core-contract: <wormhole-core-trait>
+    }))
+  (begin
+    ;; Check execution flow
+    (try! (contract-call? .pyth-governance-v1 check-execution-flow contract-caller (some execution-plan)))
+    ;; Perform contract-call
+    (let ((pyth-decoder-contract (get pyth-decoder-contract execution-plan))
+          (wormhole-core-contract (get wormhole-core-contract execution-plan))
+          (decoded-prices (try! (contract-call? pyth-decoder-contract decode-and-verify-price-feeds price-feed-bytes wormhole-core-contract)))
+          (fee-info (contract-call? .pyth-governance-v1 get-fee-info))
+          (fee-amount (* (len decoded-prices) (* (get mantissa fee-info) (pow u10 (get exponent fee-info))))))
+      ;; Charge fee
+      (unwrap! (stx-transfer? fee-amount tx-sender (get address fee-info)) ERR_BALANCE_INSUFFICIENT)
+      (ok decoded-prices))))
