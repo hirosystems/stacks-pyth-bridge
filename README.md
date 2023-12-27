@@ -61,9 +61,14 @@ That can be consumed with the following invocation:
 
 ```clarity
 (contract-call? 
-    'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-helper-v1                ;; Address of the helper contract
+    'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-oracle-v2                ;; Address of the helper contract
     read-price
     0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43)      ;; BTC-USD price identifier
+    {
+      pyth-storage-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-storage-v1,
+      pyth-decoder-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-pnau-decoder-v1,
+      wormhole-core-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.wormhole-core-v1
+    }
 ```
 
 The authenticity of the price feeds is verified during their ingestion, making the cost of queries as light as possible.
@@ -121,9 +126,14 @@ This VAA can be encoded as a Clarity buffer, and submitted to the Pyth contract 
 
 ```clarity
 (contract-call? 
-    'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-helper-v1   ;; Address of the helper contract
+    'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-oracle-v2   ;; Address of the helper contract
     verify-and-update-price
-    0x504e41550100000003b8...a7b10321ad7c2404a910)              ;; BTC-USD price update
+    0x504e41550100000003b8...a7b10321ad7c2404a910               ;; BTC-USD price update
+    {
+      pyth-storage-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-storage-v1,
+      pyth-decoder-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-pnau-decoder-v1,
+      wormhole-core-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.wormhole-core-v1
+    })
 ```
 
 If the VAA is valid, the contract call will return a payload with the following signature:
