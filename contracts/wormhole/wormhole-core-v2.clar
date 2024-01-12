@@ -66,6 +66,14 @@
 (define-constant ERR_GSU_CHECK_CHAIN (err u1303))
 ;; Guardian Set Update new index invalid
 (define-constant ERR_GSU_CHECK_INDEX (err u1304))
+;; Guardian Set Update emission payload unauthorized
+(define-constant ERR_GSU_CHECK_EMITTER (err u1305))
+
+;; Guardian set upgrade emitting address
+(define-constant GSU-EMITTING-ADDRESS 0x0000000000000000000000000000000000000000000000000000000000000004)
+;; Guardian set upgrade emitting chain
+(define-constant GSU-EMITTING-CHAIN u1)
+
 
 (define-constant hk-cursor-v2 'SP2J933XB2CP2JQ1A4FGN8JA968BBG3NK3EKZ7Q9F.hk-cursor-v2)
 
@@ -198,6 +206,10 @@
     ;; Ensure that enough uncompressed-public-keys were provided
     (asserts! (is-eq (len uncompressed-public-keys) (len eth-addresses)) 
       ERR_GSU_UNCOMPRESSED_PUBLIC_KEYS)
+    ;; Check emitting address
+    (asserts! (is-eq (get emitter-address vaa) GSU-EMITTING-ADDRESS) ERR_GSU_CHECK_EMITTER)
+    ;; Check emitting address
+    (asserts! (is-eq (get emitter-chain vaa) GSU-EMITTING-CHAIN) ERR_GSU_CHECK_EMITTER)
     ;; Update storage
     (map-set guardian-sets { set-id: set-id } (get result consolidated-public-keys))
     (var-set active-guardian-set-id set-id)
