@@ -12,6 +12,7 @@ import { hmac } from "@noble/hashes/hmac";
 import { sha256 } from "@noble/hashes/sha256";
 import { gsuMainnetVaas } from "./fixtures";
 import { pyth } from "../pyth/helpers";
+import { hexToBytes } from "@noble/hashes/utils";
 
 secp.etc.hmacSha256Sync = (k, ...m) =>
   hmac(sha256, k, secp.etc.concatBytes(...m));
@@ -80,6 +81,13 @@ export namespace wormhole {
     consistencyLevel?: number;
     payload?: Uint8Array;
   }
+
+  export const GovernanceUpdateEmitter = {
+    chain: 1,
+    address: hexToBytes(
+      "0000000000000000000000000000000000000000000000000000000000000004",
+    ),
+  };
 
   export namespace fc_ext {
     // Helper for generating a VAA Body;
@@ -466,6 +474,7 @@ export namespace wormhole {
       );
     let vaaBody = wormhole.buildValidVaaBodySpecs({
       payload: guardianRotationPayload,
+      emitter: wormhole.GovernanceUpdateEmitter,
     });
     let vaaHeader = wormhole.buildValidVaaHeader(keychain, vaaBody, {
       version: 1,

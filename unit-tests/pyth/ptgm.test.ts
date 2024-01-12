@@ -2,7 +2,7 @@ import { Cl, ClarityType } from "@stacks/transactions";
 import { beforeEach, describe, expect, it } from "vitest";
 import { wormhole } from "../wormhole/helpers";
 import { pyth } from "./helpers";
-import { hexToBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import { ParsedTransactionResult } from "@hirosystems/clarinet-sdk";
 import { ptgmTestnetVaas } from "./fixtures";
 
@@ -10,7 +10,7 @@ const pythOracleContractName = "pyth-oracle-v2";
 const pythStorageContractName = "pyth-store-v1";
 const pythDecoderPnauContractName = "pyth-pnau-decoder-v1";
 const pythGovernanceContractName = "pyth-governance-v1";
-const wormholeCoreContractName = "wormhole-core-v1";
+const wormholeCoreContractName = "wormhole-core-v2";
 const initialFeeRecipient = "ST3CRXBDXQ2N5P7E25Q39MEX1HSMRDSEAP1JST19D";
 
 describe("pyth-governance-v1::update-fee-value mainnet VAAs", () => {
@@ -244,7 +244,7 @@ describe("pyth-governance-v1::update-wormhole-core-contract", () => {
   const guardianSet = wormhole.generateGuardianSetKeychain(19);
   let updateWormholeContract = {
     address: "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG",
-    contractName: "wormhole-core-v2",
+    contractName: "wormhole-core-v3",
   };
   let ptgmVaaPayload = pyth.buildPtgmVaaPayload({ updateWormholeContract });
 

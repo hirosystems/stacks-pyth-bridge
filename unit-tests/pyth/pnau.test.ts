@@ -7,7 +7,7 @@ const pythOracleContractName = "pyth-oracle-v2";
 const pythDecoderPnauContractName = "pyth-pnau-decoder-v1";
 const pythGovernanceContractName = "pyth-governance-v1";
 const pythStorageContractName = "pyth-store-v1";
-const wormholeCoreContractName = "wormhole-core-v1";
+const wormholeCoreContractName = "wormhole-core-v2";
 
 describe("pyth-pnau-decoder-v1::decode-and-verify-price-feeds success", () => {
   const accounts = simnet.getAccounts();
