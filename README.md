@@ -1,8 +1,6 @@
-                      
-       /     /   ▶ Stacks Pyth Bridge   
+       /     /   ▶ Stacks Pyth Bridge
       / --- /      Bridging Pyth price feeds to the Stacks blockchain.
-     /     /       Retrieve trading pairs (BTC-USD, STX-USD, etc.) from Clarity smart contracts. 
-                  
+     /     /       Retrieve trading pairs (BTC-USD, STX-USD, etc.) from Clarity smart contracts.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[![Introduction](https://img.shields.io/badge/%23-%20Introduction%20-orange?labelColor=gray)](#Introduction)
 &nbsp;&nbsp;&nbsp;&nbsp;[![Features](https://img.shields.io/badge/%23-Features-orange?labelColor=gray)](#Features)
@@ -10,7 +8,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;[![Documentation](https://img.shields.io/badge/%23-Documentation-orange?labelColor=gray)](#Documentation)
 &nbsp;&nbsp;&nbsp;&nbsp;[![Contribute](https://img.shields.io/badge/%23-Contribute-orange?labelColor=gray)](#Contribute)
 
-***
+---
 
 # Introduction
 
@@ -43,8 +41,8 @@ $ npm test
 
 ### Latest Deployments
 
-| network | address |
-|---------|---------------------------------------------------------------------|
+| network | address                                                                                                                                                                    |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | testnet | [ST2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY1JKX06E.pyth-helper-v1](https://explorer.hiro.so/txid/0x5339f90ccdbb88e437b9b889613f1554c377d5815e3b90bbc6305b317b7bb8e8?chain=testnet) |
 | mainnet | [SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-helper-v1](https://explorer.hiro.so/txid/0xd86c2fda8a090c43016250c33231878673af62ac95d9c50645f6e2c303b9a173?chain=mainnet) |
 
@@ -53,21 +51,21 @@ $ npm test
 The `pyth-helper-v1` contract is exposing the following method:
 
 ```clarity
-(define-public (read-price 
+(define-public (read-price
     (price-feed-id (buff 32))))
 ```
 
 That can be consumed with the following invocation:
 
 ```clarity
-(contract-call? 
+(contract-call?
     'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-oracle-v2                ;; Address of the helper contract
     read-price
     0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43)      ;; BTC-USD price identifier
     {
       pyth-storage-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-storage-v1,
       pyth-decoder-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-pnau-decoder-v1,
-      wormhole-core-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.wormhole-core-v1
+      wormhole-core-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.wormhole-core-v2
     }
 ```
 
@@ -125,21 +123,21 @@ This sequence of bytes is a Verified Action Approvals (VAA) including the price 
 This VAA can be encoded as a Clarity buffer, and submitted to the Pyth contract using the following:
 
 ```clarity
-(contract-call? 
+(contract-call?
     'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-oracle-v2   ;; Address of the helper contract
     verify-and-update-price
     0x504e41550100000003b8...a7b10321ad7c2404a910               ;; BTC-USD price update
     {
       pyth-storage-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-storage-v1,
       pyth-decoder-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-pnau-decoder-v1,
-      wormhole-core-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.wormhole-core-v1
+      wormhole-core-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.wormhole-core-v2
     })
 ```
 
 If the VAA is valid, the contract call will return a payload with the following signature:
 
 ```clarity
-(response 
+(response
   (list 64 {
     price-identifier: (buff 32),
     price: int,
@@ -149,7 +147,7 @@ If the VAA is valid, the contract call will return a payload with the following 
     ema-conf: uint,
     publish-time: uint,
     prev-publish-time: uint,
-  }) 
+  })
   uint)
 ```
 

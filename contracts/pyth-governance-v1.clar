@@ -75,7 +75,7 @@
     pyth-oracle-contract: .pyth-oracle-v2,
     pyth-decoder-contract: .pyth-pnau-decoder-v1, 
     pyth-storage-contract: .pyth-store-v1,
-    wormhole-core-contract: .wormhole-core-v1
+    wormhole-core-contract: .wormhole-core-v2
 })
 
 (define-read-only (check-execution-flow 

@@ -39,8 +39,8 @@ path = 'contracts/pyth-traits-v1.clar'
 clarity_version = 2
 epoch = 2.4
 
-[contracts.wormhole-core-v1]
-path = 'contracts/wormhole/wormhole-core-v1.clar'
+[contracts.wormhole-core-v2]
+path = 'contracts/wormhole/wormhole-core-v2.clar'
 clarity_version = 2
 epoch = 2.4
 
