@@ -1,5 +1,5 @@
 ;; Title: wormhole-core
-;; Version: v1
+;; Version: v2
 ;; Check for latest version: https://github.com/hirosystems/stacks-pyth-bridge#latest-version
 ;; Report an issue: https://github.com/hirosystems/stacks-pyth-bridge/issues
 
