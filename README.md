@@ -41,18 +41,19 @@ $ npm test
 
 ### Latest Deployments
 
-| network | address                                                                                                                                                                    |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| testnet | [ST2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY1JKX06E.pyth-helper-v1](https://explorer.hiro.so/txid/0x5339f90ccdbb88e437b9b889613f1554c377d5815e3b90bbc6305b317b7bb8e8?chain=testnet) |
-| mainnet | [SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-helper-v1](https://explorer.hiro.so/txid/0xd86c2fda8a090c43016250c33231878673af62ac95d9c50645f6e2c303b9a173?chain=mainnet) |
+| network | address                                                                                                                                                                      |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| testnet | [ST2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY1JKX06E.pyth-oracle-v2](https://explorer.hiro.so/txid/0x59dc127b983fcb8027706191b62138eb73a3ade8ecdbad5e99df4d2bfbbd6dfb?chain = testnet) |
+| mainnet | [SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-oracle-v2](https://explorer.hiro.so/txid/0xee803f98e61c1d46d36d130c29d4a78099c8fb5700528226f3dc5a104954ffeb?chain = mainnet) |
 
 ### Onchain
 
-The `pyth-helper-v1` contract is exposing the following method:
+The `pyth-oracle-v2` contract is exposing the following method:
 
 ```clarity
-(define-public (read-price
-    (price-feed-id (buff 32))))
+(define-public (read-price-feed
+    (price-feed-id (buff 32))
+    (pyth-storage-address <pyth-storage-trait>)))
 ```
 
 That can be consumed with the following invocation:
@@ -60,13 +61,9 @@ That can be consumed with the following invocation:
 ```clarity
 (contract-call?
     'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-oracle-v2                ;; Address of the helper contract
-    read-price
-    0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43)      ;; BTC-USD price identifier
-    {
-      pyth-storage-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-storage-v1,
-      pyth-decoder-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-pnau-decoder-v1,
-      wormhole-core-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.wormhole-core-v2
-    }
+    read-price-feed
+    0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43      ;; BTC-USD price identifier
+    'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-store-v1)
 ```
 
 The authenticity of the price feeds is verified during their ingestion, making the cost of queries as light as possible.
@@ -128,7 +125,7 @@ This VAA can be encoded as a Clarity buffer, and submitted to the Pyth contract 
     verify-and-update-price
     0x504e41550100000003b8...a7b10321ad7c2404a910               ;; BTC-USD price update
     {
-      pyth-storage-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-storage-v1,
+      pyth-storage-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-store-v1,
       pyth-decoder-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-pnau-decoder-v1,
       wormhole-core-contract: 'SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.wormhole-core-v2
     })
