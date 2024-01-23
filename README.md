@@ -41,10 +41,10 @@ $ npm test
 
 ### Latest Deployments
 
-| network | address                                                                                                                                                                      |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| testnet | [ST2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY1JKX06E.pyth-oracle-v2](https://explorer.hiro.so/txid/0x59dc127b983fcb8027706191b62138eb73a3ade8ecdbad5e99df4d2bfbbd6dfb?chain = testnet) |
-| mainnet | [SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-oracle-v2](https://explorer.hiro.so/txid/0xee803f98e61c1d46d36d130c29d4a78099c8fb5700528226f3dc5a104954ffeb?chain = mainnet) |
+| network | address                                                                                                                                                                    |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| testnet | [ST2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY1JKX06E.pyth-oracle-v2](https://explorer.hiro.so/txid/0x59dc127b983fcb8027706191b62138eb73a3ade8ecdbad5e99df4d2bfbbd6dfb?chain=testnet) |
+| mainnet | [SP2T5JKWWP3FYYX4YRK8GK5BG2YCNGEAEY2P2PKN0.pyth-oracle-v2](https://explorer.hiro.so/txid/0xee803f98e61c1d46d36d130c29d4a78099c8fb5700528226f3dc5a104954ffeb?chain=mainnet) |
 
 ### Onchain
 
