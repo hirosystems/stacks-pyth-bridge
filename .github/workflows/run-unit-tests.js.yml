@@ -35,12 +35,12 @@ jobs:
         node-version: [18.x]
 
     steps:
-    - working-directory: ./example/cbtc
     - uses: actions/checkout@v3
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - working-directory: ./example/cbtc
     - run: npm ci
     - run: npm test
