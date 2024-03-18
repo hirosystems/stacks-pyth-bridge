@@ -107,3 +107,12 @@ and
 ```bash
 clarinet deployment apply -p deployments/unwrap-btc.devnet-plan.yaml
 ```
+
+## Run the unit tests
+
+Install the npm dependencies and run the test:
+
+```bash
+npm install
+npm test
+```

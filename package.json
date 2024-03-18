@@ -9,7 +9,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "chokidar \"tests/**/*.ts\" \"contracts/**/*.clar\" -c \"npm run test:coverage\"",
-    "test:coverage": "vitest run -- --coverage true",
+    "test:coverage": "vitest run -- --coverage",
     "format": "prettier ./unit-tests --write"
   },
   "author": "",
