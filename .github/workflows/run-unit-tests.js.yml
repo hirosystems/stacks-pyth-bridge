@@ -41,6 +41,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-      working-directory: ./example/cbtc
     - run: npm ci
+      working-directory: ./example/cbtc
     - run: npm test
+      working-directory: ./example/cbtc
